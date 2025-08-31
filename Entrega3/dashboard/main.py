@@ -4,8 +4,8 @@ import pickle
 import os
 import datetime
 
-# Importar páginas desde el módulo pages
-from pages import (
+# Importar páginas desde el módulo modules
+from modules import (
     render_exploration_page,
     render_prediction_page,
     render_model_analysis_page,
@@ -19,6 +19,17 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# Ocultar la navegación automática de Streamlit
+st.markdown("""
+<style>
+    .stAppHeader {display: none;}
+    .css-1v0mbdj.etr89bj1 {display: none;}
+    .css-1lcbmhc.e1fqkh3o0 {display: none;}
+    section[data-testid="stSidebar"] .css-ng1t4o {display: none;}
+    section[data-testid="stSidebar"] .css-1d391kg {display: none;}
+</style>
+""", unsafe_allow_html=True)
 
 # Inicializar session state para logs
 if 'loading_messages' not in st.session_state:
@@ -135,10 +146,12 @@ def main():
     add_loading_message("🚀 Iniciando aplicación..")
     
     # Título principal
-    st.title("🚢 Dashboard Interactivo - Análisis del Titanic")
+    st.title("🚢 Dashboard Titanic - Análisis de Supervivencia ML")
     st.markdown("""
     **Dashboard Interactivo de Machine Learning** para el análisis y predicción de supervivencia en el Titanic.
     Explore los datos, genere predicciones y analice modelos de forma interactiva.
+    
+    **Navegue usando el sidebar** ← para acceder a las diferentes secciones del análisis.
     """)
     
     # Mostrar log de carga
@@ -154,19 +167,39 @@ def main():
     # Cargar modelos
     models = load_models()
     
-    # Usar página por defecto (Exploración de Datos)
-    page = "🔍 Exploración de Datos"
+    # === NAVEGACIÓN ===
+    # Selector de página en sidebar (simple y limpio)
+    page_options = [
+        "🔍 Exploración de Datos",
+        "🔮 Predicción Interactiva", 
+        "📊 Análisis de Modelos",
+        "🔄 Análisis What-If"
+    ]
+    
+    selected_page = st.sidebar.selectbox(
+        "Seleccione una sección:",
+        options=page_options,
+        index=0,  # Por defecto: Exploración de Datos
+        help="Navegue entre las diferentes secciones del dashboard"
+    )
+    
+    # Información adicional en sidebar
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 📊 Información del Dataset")
+    st.sidebar.info(f"📈 **{len(df)}** registros totales")
+    st.sidebar.info(f"📋 **{len(df.columns)}** variables")
+    st.sidebar.info(f"🤖 **{len(models)}** modelos cargados")
     
     # Renderizar página seleccionada
-    add_loading_message(f"📄 Navegando a: {page}")
+    add_loading_message(f"📄 Navegando a: {selected_page}")
     
-    if page == "🔍 Exploración de Datos":
+    if selected_page == "🔍 Exploración de Datos":
         render_exploration_page(df)
-    elif page == "🔮 Predicción Interactiva":
+    elif selected_page == "🔮 Predicción Interactiva":
         render_prediction_page(df, models)
-    elif page == "📊 Análisis de Modelos":
+    elif selected_page == "📊 Análisis de Modelos":
         render_model_analysis_page(df, models)
-    elif page == "🔄 Análisis What-If":
+    elif selected_page == "🔄 Análisis What-If":
         render_whatif_page(df, models)
 
 if __name__ == "__main__":
