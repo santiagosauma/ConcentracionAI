@@ -123,9 +123,10 @@ def load_models():
     # Lista de modelos a cargar (incluyendo todos los disponibles)
     model_files = {
         "Random Forest": "randomforest_model.pkl",
-        "XGBoost": "xgboost_model.pkl",
+        "XGBoost": "xgboost_model.pkl", 
         "Logistic Regression": "logisticregression_model.pkl",
-        "Neural Network": "NeuralNetwork_Publication_20250831_170008.h5"
+        "Neural Network": "NeuralNetwork_Publication_20250831_170008.h5",
+        "SVM": "svm_model.pkl"
     }
     
     for name, filename in model_files.items():
@@ -166,7 +167,12 @@ def load_models():
                         add_loading_message(f"   - C (regularización): {model.C}")
                     
                     # Validación de dimensiones esperadas
-                    expected_features = 89 if name != 'Neural Network' else 76
+                    if name == 'Neural Network':
+                        expected_features = 76
+                    elif name == 'SVM':
+                        expected_features = 5
+                    else:
+                        expected_features = 89
                     add_loading_message(f"   - Features esperadas: {expected_features}")
                     
                     # Verificar si el modelo tiene métodos de predicción esperados
