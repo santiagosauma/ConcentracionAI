@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import pickle
+import joblib  # Agregar joblib para cargar los modelos
 import os
 import datetime
 
@@ -130,9 +131,23 @@ def load_models():
         try:
             if os.path.exists(path):
                 add_loading_message(f"📂 Cargando modelo: {name}")
-                with open(path, 'rb') as f:
-                    models[name] = pickle.load(f)
-                add_loading_message(f"✅ Modelo {name} cargado exitosamente")
+                # Usar joblib.load() en lugar de pickle.load() para mantener consistencia
+                model = joblib.load(path)
+                models[name] = model
+                
+                # Información detallada del modelo cargado
+                model_type = type(model).__name__
+                model_module = type(model).__module__
+                add_loading_message(f"✅ Modelo {name} cargado: {model_type} (de {model_module})")
+                
+                # Información adicional específica
+                if hasattr(model, 'n_estimators'):
+                    add_loading_message(f"   - n_estimators: {model.n_estimators}")
+                if hasattr(model, 'max_depth'):
+                    add_loading_message(f"   - max_depth: {model.max_depth}")
+                if hasattr(model, 'learning_rate'):
+                    add_loading_message(f"   - learning_rate: {model.learning_rate}")
+                    
             else:
                 add_loading_message(f"⚠️ Archivo no encontrado: {path}")
         except Exception as e:
@@ -167,7 +182,24 @@ def main():
     # Cargar modelos
     models = load_models()
     
+    # === INFORMACIÓN DEL DATASET ===
+    st.subheader("📊 Información del Dataset")
+    
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("📈 Registros Totales", f"{len(df):,}")
+    with col2:
+        st.metric("📋 Variables", f"{len(df.columns)}")
+    with col3:
+        st.metric("🤖 Modelos Cargados", f"{len(models)}")
+    
+    st.markdown("---")
+    
     # === NAVEGACIÓN ===
+    # Título grande para la navegación en el sidebar
+    st.sidebar.markdown("# 🎯 Elegir Sección")
+    st.sidebar.markdown("**Seleccione el análisis que desea realizar:**")
+    
     # Selector de página en sidebar (simple y limpio)
     page_options = [
         "🔍 Exploración de Datos",
@@ -177,18 +209,11 @@ def main():
     ]
     
     selected_page = st.sidebar.selectbox(
-        "Seleccione una sección:",
+        "Navegación:",
         options=page_options,
         index=0,  # Por defecto: Exploración de Datos
         help="Navegue entre las diferentes secciones del dashboard"
     )
-    
-    # Información adicional en sidebar
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("### 📊 Información del Dataset")
-    st.sidebar.info(f"📈 **{len(df)}** registros totales")
-    st.sidebar.info(f"📋 **{len(df.columns)}** variables")
-    st.sidebar.info(f"🤖 **{len(models)}** modelos cargados")
     
     # Renderizar página seleccionada
     add_loading_message(f"📄 Navegando a: {selected_page}")

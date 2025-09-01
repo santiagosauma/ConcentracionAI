@@ -85,6 +85,100 @@ def show_fare_info_modal():
         st.write("• **Familia Sage**: £70 total (11 personas)")
         st.write("• **Huérfanos Navratil**: £60 (historia famosa)")
 
+def create_feature_vector_simple(pclass, sex, age, sibsp, parch, fare, embarked):
+    """
+    Crear un vector de características usando solo las características básicas
+    y aplicando One-Hot Encoding manual para que sea compatible con los modelos
+    """
+    import numpy as np
+    
+    # Características numéricas básicas
+    features = [
+        pclass,           # Pclass
+        age,              # Age  
+        sibsp,            # SibSp
+        parch,            # Parch
+        fare,             # Fare
+    ]
+    
+    # Feature engineering básico
+    family_size = sibsp + parch + 1
+    is_alone = 1 if family_size == 1 else 0
+    fare_per_person = fare / family_size if family_size > 0 else fare
+    
+    features.extend([
+        family_size,      # FamilySize
+        is_alone,         # IsAlone
+        fare_per_person,  # FarePerPerson
+        1 if age < 18 else 0,  # IsMinor
+        0,                # Has_Cabin (asumimos no)
+    ])
+    
+    # One-Hot Encoding para Sex
+    features.extend([
+        1 if sex == 'male' else 0,    # Sex_male
+        1 if sex == 'female' else 0,  # Sex_female
+    ])
+    
+    # One-Hot Encoding para Embarked
+    features.extend([
+        1 if embarked == 'C' else 0,  # Embarked_C
+        1 if embarked == 'Q' else 0,  # Embarked_Q  
+        1 if embarked == 'S' else 0,  # Embarked_S
+    ])
+    
+    # One-Hot Encoding para Title
+    if sex == 'male':
+        title_master = 1 if age < 18 else 0
+        title_mr = 1 if age >= 18 else 0
+        title_miss = 0
+        title_mrs = 0
+    else:
+        title_master = 0
+        title_mr = 0
+        title_miss = 1 if age < 25 else 0  # Aproximación
+        title_mrs = 1 if age >= 25 else 0  # Aproximación
+    
+    features.extend([
+        title_master,     # Title_Master
+        title_miss,       # Title_Miss  
+        title_mr,         # Title_Mr
+        title_mrs,        # Title_Mrs
+    ])
+    
+    # Age Groups
+    age_group_child = 1 if age < 18 else 0
+    age_group_young = 1 if 18 <= age < 35 else 0
+    age_group_adult = 1 if 35 <= age < 60 else 0
+    age_group_senior = 1 if age >= 60 else 0
+    
+    features.extend([
+        age_group_child,   # AgeGroup_Child
+        age_group_young,   # AgeGroup_YoungAdult
+        age_group_adult,   # AgeGroup_Adult
+        age_group_senior,  # AgeGroup_Senior
+    ])
+    
+    # Family Size Categories
+    family_solo = 1 if family_size == 1 else 0
+    family_small = 1 if 2 <= family_size <= 3 else 0
+    family_large = 1 if family_size > 3 else 0
+    
+    features.extend([
+        family_solo,       # FamilySize_Solo
+        family_small,      # FamilySize_Small
+        family_large,      # FamilySize_Large
+    ])
+    
+    # Rellenar con ceros hasta llegar a 89 características
+    while len(features) < 89:
+        features.append(0)
+    
+    # Asegurarse de que tenemos exactamente 89 características
+    features = features[:89]
+    
+    return np.array(features).reshape(1, -1)
+
 def render_prediction_page(df, models):
     """Página de predicción interactiva"""
     st.header("🔮 Predicción de Supervivencia")
@@ -93,6 +187,16 @@ def render_prediction_page(df, models):
     **🎯 Predicción Interactiva**: Ingrese las características de un pasajero para predecir su probabilidad 
     de supervivencia usando múltiples modelos de Machine Learning entrenados.
     """)
+    
+    # Botón de información histórica FUERA del formulario
+    col_info1, col_info2, col_info3 = st.columns([1, 2, 1])
+    with col_info2:
+        if st.button("💰 Ver Información Histórica de Tarifas del Titanic", 
+                    help="Información sobre tarifas del Titanic", 
+                    use_container_width=True):
+            show_fare_info_modal()
+    
+    st.markdown("---")
     
     # Formulario de predicción
     with st.form("prediction_form"):
@@ -140,18 +244,12 @@ def render_prediction_page(df, models):
                 help="Número de padres/hijos a bordo"
             )
             
-            # Información sobre tarifas con botón de ayuda
-            col_fare, col_info = st.columns([3, 1])
-            with col_fare:
-                fare = st.text_input(
-                    "💰 Tarifa Pagada (£):",
-                    value="32.0",
-                    help="Tarifa pagada por el boleto en libras esterlinas"
-                )
-            with col_info:
-                st.write("")  # Espaciado
-                if st.button("💰 Ver Info Histórica de Tarifas", help="Información sobre tarifas del Titanic"):
-                    show_fare_info_modal()
+            # Campo de tarifa simplificado
+            fare = st.text_input(
+                "💰 Tarifa Pagada (£):",
+                value="32.0",
+                help="Tarifa pagada por el boleto en libras esterlinas (ver información histórica arriba)"
+            )
         
         with col3:
             st.subheader("🚢 Información del Viaje")
@@ -182,18 +280,71 @@ def render_prediction_page(df, models):
                 st.error("❌ Por favor ingrese un valor numérico válido para la tarifa")
                 return
             
-            # Crear array de características
-            features = np.array([[pclass, 1 if sex == 'female' else 0, age, sibsp, parch, fare_value, 
-                                1 if embarked == 'C' else 0, 1 if embarked == 'Q' else 0, 1 if embarked == 'S' else 0]])
-            
-            # Realizar predicciones con todos los modelos
-            predictions = {}
-            for model_name, model in models.items():
-                try:
-                    prob = model.predict_proba(features)[0][1]
-                    predictions[model_name] = prob
-                except Exception as e:
-                    st.error(f"Error con modelo {model_name}: {str(e)}")
+            # Crear vector de características compatible con los modelos
+            try:
+                X_transformed = create_feature_vector_simple(pclass, sex, age, sibsp, parch, fare_value, embarked)
+                
+                # Realizar predicciones con todos los modelos
+                predictions = {}
+                model_info = {}
+                for model_name, model in models.items():
+                    try:
+                        # Información de depuración del modelo
+                        model_type = type(model).__name__
+                        model_info[model_name] = {
+                            'type': model_type,
+                            'module': type(model).__module__
+                        }
+                        
+                        # Verificar si el modelo tiene predict_proba
+                        if hasattr(model, 'predict_proba'):
+                            prob = float(model.predict_proba(X_transformed)[0][1])  # Convertir a float de Python
+                        else:
+                            # Si no tiene predict_proba, usar predict y convertir
+                            pred = model.predict(X_transformed)[0]
+                            prob = float(pred)  # Convertir a float de Python
+                        
+                        predictions[model_name] = prob
+                    except Exception as e:
+                        st.error(f"Error con modelo {model_name}: {str(e)}")
+                        st.error(f"Forma de datos enviada: {X_transformed.shape}")
+                
+                # Mostrar información de depuración
+                with st.expander("🔍 Información de Depuración de Modelos", expanded=False):
+                    st.write("**Modelos cargados:**")
+                    for name, info in model_info.items():
+                        st.write(f"- **{name}**: {info['type']} (de {info['module']})")
+                    
+                    st.write("**Características enviadas:**")
+                    st.write(f"- Forma del vector: {X_transformed.shape}")
+                    st.write(f"- Primeros 10 valores: {X_transformed[0][:10].tolist()}")
+                    
+                    st.write("**Predicciones obtenidas:**")
+                    for name, prob in predictions.items():
+                        st.write(f"- **{name}**: {prob:.4f} ({prob:.1%})")
+                    
+                    # Prueba adicional: verificar con casos extremos
+                    st.write("**🧪 Prueba de Diferenciación de Modelos:**")
+                    st.write("Probando con casos extremos para verificar diferencias...")
+                    
+                    # Caso 1: Mujer, primera clase, joven
+                    test1 = create_feature_vector_simple(1, 'female', 25, 0, 0, 100, 'C')
+                    # Caso 2: Hombre, tercera clase, mayor  
+                    test2 = create_feature_vector_simple(3, 'male', 60, 0, 0, 7, 'S')
+                    
+                    for i, (test_case, description) in enumerate([(test1, "Mujer 1ra clase"), (test2, "Hombre 3ra clase")], 1):
+                        st.write(f"**Caso {i} ({description}):**")
+                        for model_name, model in models.items():
+                            try:
+                                if hasattr(model, 'predict_proba'):
+                                    test_prob = float(model.predict_proba(test_case)[0][1])
+                                    st.write(f"  - {model_name}: {test_prob:.4f}")
+                            except:
+                                st.write(f"  - {model_name}: Error en predicción de prueba")
+                        
+            except Exception as e:
+                st.error(f"❌ Error creando vector de características: {str(e)}")
+                return
             
             if predictions:
                 # Mostrar resultados
@@ -220,9 +371,10 @@ def render_prediction_page(df, models):
                 
                 with col2:
                     # Resumen de consenso
-                    avg_prob = np.mean(list(predictions.values()))
-                    max_prob = max(predictions.values())
-                    min_prob = min(predictions.values())
+                    prob_values = list(predictions.values())
+                    avg_prob = float(np.mean(prob_values))
+                    max_prob = float(max(prob_values))
+                    min_prob = float(min(prob_values))
                     
                     st.subheader("📊 Consenso de Modelos")
                     st.metric("📈 Promedio", f"{avg_prob:.1%}")
