@@ -91,25 +91,43 @@ def calculate_metrics_from_models(models, df):
                 
                 for data_point in evaluation_data:
                     try:
-                        # Crear vector de características
+                        # Crear vector de características usando las funciones corregidas
                         if model_name == 'Neural Network':
-                            from .prediction import create_feature_vector_neural_network
-                            X = create_feature_vector_neural_network(
+                            from .prediction import create_feature_vector_neural_network_corrected
+                            X = create_feature_vector_neural_network_corrected(
+                                data_point['pclass'], data_point['sex'], data_point['age'],
+                                data_point['sibsp'], data_point['parch'], data_point['fare'],
+                                data_point['embarked']
+                            )
+                        elif model_name == 'SVM':
+                            from .prediction import create_feature_vector_svm
+                            X = create_feature_vector_svm(
                                 data_point['pclass'], data_point['sex'], data_point['age'],
                                 data_point['sibsp'], data_point['parch'], data_point['fare'],
                                 data_point['embarked']
                             )
                         else:
-                            from .prediction import create_feature_vector_simple
-                            X = create_feature_vector_simple(
+                            from .prediction import create_feature_vector_scikit_models_corrected
+                            X = create_feature_vector_scikit_models_corrected(
                                 data_point['pclass'], data_point['sex'], data_point['age'],
                                 data_point['sibsp'], data_point['parch'], data_point['fare'],
                                 data_point['embarked']
                             )
                         
-                        # Hacer predicción
+                        # Hacer predicción con lógica apropiada para cada modelo
                         if 'tensorflow' in str(type(model)).lower() or 'keras' in str(type(model)).lower():
                             pred_prob = float(model.predict(X, verbose=0)[0][0])
+                        elif model_name == 'SVM':
+                            # Lógica especial para SVM
+                            if hasattr(model, 'predict_proba'):
+                                pred_prob = float(model.predict_proba(X)[0][1])
+                            elif hasattr(model, 'decision_function'):
+                                decision_score = model.decision_function(X)[0]
+                                import math
+                                pred_prob = 1 / (1 + math.exp(-decision_score))
+                            else:
+                                binary_pred = model.predict(X)[0]
+                                pred_prob = 0.75 if binary_pred == 1 else 0.25
                         elif hasattr(model, 'predict_proba'):
                             pred_prob = float(model.predict_proba(X)[0][1])
                         else:
@@ -215,17 +233,31 @@ def analyze_predictions_errors(models, df):
                     fare = row.get('Fare', 10)
                     embarked = row.get('Embarked', 'S')
                     
-                    # Crear vector de características
+                    # Crear vector de características usando las funciones corregidas
                     if model_name == 'Neural Network':
-                        from .prediction import create_feature_vector_neural_network
-                        X = create_feature_vector_neural_network(pclass, sex, age, sibsp, parch, fare, embarked)
+                        from .prediction import create_feature_vector_neural_network_corrected
+                        X = create_feature_vector_neural_network_corrected(pclass, sex, age, sibsp, parch, fare, embarked)
+                    elif model_name == 'SVM':
+                        from .prediction import create_feature_vector_svm
+                        X = create_feature_vector_svm(pclass, sex, age, sibsp, parch, fare, embarked)
                     else:
-                        from .prediction import create_feature_vector_simple
-                        X = create_feature_vector_simple(pclass, sex, age, sibsp, parch, fare, embarked)
+                        from .prediction import create_feature_vector_scikit_models_corrected
+                        X = create_feature_vector_scikit_models_corrected(pclass, sex, age, sibsp, parch, fare, embarked)
                     
-                    # Hacer predicción
+                    # Hacer predicción con lógica apropiada para cada modelo
                     if 'tensorflow' in str(type(model)).lower() or 'keras' in str(type(model)).lower():
                         pred = float(model.predict(X, verbose=0)[0][0])
+                    elif model_name == 'SVM':
+                        # Lógica especial para SVM
+                        if hasattr(model, 'predict_proba'):
+                            pred = float(model.predict_proba(X)[0][1])
+                        elif hasattr(model, 'decision_function'):
+                            decision_score = model.decision_function(X)[0]
+                            import math
+                            pred = 1 / (1 + math.exp(-decision_score))
+                        else:
+                            binary_pred = model.predict(X)[0]
+                            pred = 0.75 if binary_pred == 1 else 0.25
                     elif hasattr(model, 'predict_proba'):
                         pred = float(model.predict_proba(X)[0][1])
                     else:
@@ -355,14 +387,32 @@ def render_model_analysis_page(df, models):
                 # Análisis de las métricas
                 st.subheader("📋 Interpretación de Resultados")
                 
-                best_accuracy = max([(name, data.get('accuracy', 0)) for name, data in model_results.items() if isinstance(data.get('accuracy'), (int, float))], key=lambda x: x[1])
-                best_auc = max([(name, data.get('roc_auc', 0)) for name, data in model_results.items() if isinstance(data.get('roc_auc'), (int, float))], key=lambda x: x[1])
+                # Encontrar mejores métricas de forma segura
+                accuracy_candidates = [(name, data.get('accuracy', 0)) for name, data in model_results.items() if isinstance(data.get('accuracy'), (int, float)) and data.get('accuracy', 0) > 0]
+                auc_candidates = [(name, data.get('roc_auc', 0)) for name, data in model_results.items() if isinstance(data.get('roc_auc'), (int, float)) and data.get('roc_auc', 0) > 0]
+                
+                if accuracy_candidates:
+                    best_accuracy = max(accuracy_candidates, key=lambda x: x[1])
+                else:
+                    best_accuracy = ("N/A", 0)
+                    
+                if auc_candidates:
+                    best_auc = max(auc_candidates, key=lambda x: x[1])
+                else:
+                    best_auc = ("N/A", 0)
                 
                 col1, col2 = st.columns(2)
                 with col1:
-                    st.success(f"🏆 **Mejor Accuracy:** {best_accuracy[0]} ({best_accuracy[1]:.3f})")
+                    if best_accuracy[0] != "N/A":
+                        st.success(f"🏆 **Mejor Accuracy:** {best_accuracy[0]} ({best_accuracy[1]:.3f})")
+                    else:
+                        st.info("🏆 **Mejor Accuracy:** No disponible")
+                        
                 with col2:
-                    st.success(f"🎯 **Mejor ROC-AUC:** {best_auc[0]} ({best_auc[1]:.3f})")
+                    if best_auc[0] != "N/A":
+                        st.success(f"🎯 **Mejor ROC-AUC:** {best_auc[0]} ({best_auc[1]:.3f})")
+                    else:
+                        st.info("🎯 **Mejor ROC-AUC:** No disponible")
         else:
             st.warning("⚠️ No se pudieron cargar métricas de modelos. Mostrando modelos disponibles:")
             for model_name in models.keys():
@@ -515,18 +565,33 @@ def render_model_analysis_page(df, models):
                     fare = np.random.uniform(5, 100)
                     embarked = np.random.choice(['S', 'C', 'Q'])
                     
-                    # Crear vector y predecir
+                    # Crear vector y predecir usando las funciones corregidas
                     if selected_error_model == 'Neural Network':
-                        from .prediction import create_feature_vector_neural_network
-                        X = create_feature_vector_neural_network(pclass, sex, age, sibsp, parch, fare, embarked)
+                        from .prediction import create_feature_vector_neural_network_corrected
+                        X = create_feature_vector_neural_network_corrected(pclass, sex, age, sibsp, parch, fare, embarked)
+                    elif selected_error_model == 'SVM':
+                        from .prediction import create_feature_vector_svm
+                        X = create_feature_vector_svm(pclass, sex, age, sibsp, parch, fare, embarked)
                     else:
-                        from .prediction import create_feature_vector_simple
-                        X = create_feature_vector_simple(pclass, sex, age, sibsp, parch, fare, embarked)
+                        from .prediction import create_feature_vector_scikit_models_corrected
+                        X = create_feature_vector_scikit_models_corrected(pclass, sex, age, sibsp, parch, fare, embarked)
                     
                     model = models[selected_error_model]
                     
+                    # Hacer predicción con lógica apropiada para cada modelo
                     if 'tensorflow' in str(type(model)).lower() or 'keras' in str(type(model)).lower():
                         pred = float(model.predict(X, verbose=0)[0][0])
+                    elif selected_error_model == 'SVM':
+                        # Lógica especial para SVM
+                        if hasattr(model, 'predict_proba'):
+                            pred = float(model.predict_proba(X)[0][1])
+                        elif hasattr(model, 'decision_function'):
+                            decision_score = model.decision_function(X)[0]
+                            import math
+                            pred = 1 / (1 + math.exp(-decision_score))
+                        else:
+                            binary_pred = model.predict(X)[0]
+                            pred = 0.75 if binary_pred == 1 else 0.25
                     elif hasattr(model, 'predict_proba'):
                         pred = float(model.predict_proba(X)[0][1])
                     else:

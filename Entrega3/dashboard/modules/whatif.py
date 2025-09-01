@@ -6,14 +6,17 @@ import plotly.graph_objects as go
 
 def create_feature_vector_whatif(pclass, sex, age, sibsp, parch, fare, embarked, model_name):
     """
-    Crear vector de características para análisis What-If
+    Crear vector de características para análisis What-If usando las funciones corregidas
     """
     if model_name == 'Neural Network':
-        from .prediction import create_feature_vector_neural_network
-        return create_feature_vector_neural_network(pclass, sex, age, sibsp, parch, fare, embarked)
+        from .prediction import create_feature_vector_neural_network_corrected
+        return create_feature_vector_neural_network_corrected(pclass, sex, age, sibsp, parch, fare, embarked)
+    elif model_name == 'SVM':
+        from .prediction import create_feature_vector_svm
+        return create_feature_vector_svm(pclass, sex, age, sibsp, parch, fare, embarked)
     else:
-        from .prediction import create_feature_vector_simple
-        return create_feature_vector_simple(pclass, sex, age, sibsp, parch, fare, embarked)
+        from .prediction import create_feature_vector_scikit_models_corrected
+        return create_feature_vector_scikit_models_corrected(pclass, sex, age, sibsp, parch, fare, embarked)
 
 def get_prediction(model, X_transformed, model_name):
     """
