@@ -84,15 +84,6 @@ def show_fare_info_modal():
         st.write("• **Huérfanos Navratil**: £60 (historia famosa)")
 
 def create_feature_vector_scikit_models_corrected(pclass, sex, age, sibsp, parch, fare, embarked):
-    """
-    FUNCIÓN CORREGIDA - Replica el preprocesamiento del notebook principal para scikit-learn
-    
-    Basada en el análisis de Entrega3_Modelado.ipynb:
-    - Usa las MISMAS 31 características que en el entrenamiento
-    - Aplica StandardScaler para numéricas
-    - Aplica OneHotEncoder para categóricas  
-    - Total: 89 características después del preprocesamiento
-    """
     import numpy as np
     
     

@@ -5,9 +5,6 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 def create_feature_vector_whatif(pclass, sex, age, sibsp, parch, fare, embarked, model_name):
-    """
-    Crear vector de características para análisis What-If usando las funciones corregidas
-    """
     if model_name == 'Neural Network':
         from .prediction import create_feature_vector_neural_network_corrected
         return create_feature_vector_neural_network_corrected(pclass, sex, age, sibsp, parch, fare, embarked)
@@ -19,9 +16,6 @@ def create_feature_vector_whatif(pclass, sex, age, sibsp, parch, fare, embarked,
         return create_feature_vector_scikit_models_corrected(pclass, sex, age, sibsp, parch, fare, embarked)
 
 def get_prediction(model, X_transformed, model_name):
-    """
-    Obtener predicción del modelo
-    """
     try:
         if 'tensorflow' in str(type(model)).lower() or 'keras' in str(type(model)).lower():
             return float(model.predict(X_transformed, verbose=0)[0][0])
@@ -34,7 +28,6 @@ def get_prediction(model, X_transformed, model_name):
         return 0.0
 
 def render_whatif_page(df, models):
-    """Página de análisis What-If - Análisis Contrafactual"""
     st.header("🔄 Análisis What-If")
     
     st.markdown("""
@@ -122,7 +115,6 @@ def render_whatif_page(df, models):
             new_prob = get_prediction(selected_model, X_new, selected_model_name)
             prob_change = new_prob - base_prob
             
-            # Mostrar métricas de cambio
             col_metric1, col_metric2 = st.columns(2)
             
             with col_metric1:
