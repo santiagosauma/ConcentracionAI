@@ -120,10 +120,12 @@ def load_models():
         add_loading_message(f"⚠️ Directorio de modelos no encontrado: {model_dir}")
         return models
     
-    # Lista de modelos a cargar
+    # Lista de modelos a cargar (incluyendo todos los disponibles)
     model_files = {
         "Random Forest": "randomforest_model.pkl",
-        "XGBoost": "xgboost_model.pkl"
+        "XGBoost": "xgboost_model.pkl",
+        "Logistic Regression": "logisticregression_model.pkl",
+        "Neural Network": "NeuralNetwork_Publication_20250831_170008.h5"
     }
     
     for name, filename in model_files.items():
@@ -131,23 +133,38 @@ def load_models():
         try:
             if os.path.exists(path):
                 add_loading_message(f"📂 Cargando modelo: {name}")
-                # Usar joblib.load() en lugar de pickle.load() para mantener consistencia
-                model = joblib.load(path)
-                models[name] = model
                 
-                # Información detallada del modelo cargado
-                model_type = type(model).__name__
-                model_module = type(model).__module__
-                add_loading_message(f"✅ Modelo {name} cargado: {model_type} (de {model_module})")
-                
-                # Información adicional específica
-                if hasattr(model, 'n_estimators'):
-                    add_loading_message(f"   - n_estimators: {model.n_estimators}")
-                if hasattr(model, 'max_depth'):
-                    add_loading_message(f"   - max_depth: {model.max_depth}")
-                if hasattr(model, 'learning_rate'):
-                    add_loading_message(f"   - learning_rate: {model.learning_rate}")
+                # Cargar según el tipo de archivo
+                if filename.endswith('.h5'):
+                    # Modelo de Keras/TensorFlow
+                    try:
+                        import tensorflow as tf
+                        model = tf.keras.models.load_model(path)
+                        models[name] = model
+                        add_loading_message(f"✅ Modelo {name} cargado: {type(model).__name__} (TensorFlow/Keras)")
+                    except ImportError:
+                        add_loading_message(f"⚠️ TensorFlow no disponible para cargar {name}")
+                        continue
+                else:
+                    # Modelos de scikit-learn con joblib
+                    model = joblib.load(path)
+                    models[name] = model
                     
+                    # Información detallada del modelo cargado
+                    model_type = type(model).__name__
+                    model_module = type(model).__module__
+                    add_loading_message(f"✅ Modelo {name} cargado: {model_type} (de {model_module})")
+                    
+                    # Información adicional específica
+                    if hasattr(model, 'n_estimators'):
+                        add_loading_message(f"   - n_estimators: {model.n_estimators}")
+                    if hasattr(model, 'max_depth'):
+                        add_loading_message(f"   - max_depth: {model.max_depth}")
+                    if hasattr(model, 'learning_rate'):
+                        add_loading_message(f"   - learning_rate: {model.learning_rate}")
+                    if hasattr(model, 'C'):
+                        add_loading_message(f"   - C (regularización): {model.C}")
+                        
             else:
                 add_loading_message(f"⚠️ Archivo no encontrado: {path}")
         except Exception as e:

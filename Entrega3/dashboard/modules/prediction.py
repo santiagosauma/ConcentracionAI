@@ -185,8 +185,38 @@ def render_prediction_page(df, models):
     
     st.markdown("""
     **🎯 Predicción Interactiva**: Ingrese las características de un pasajero para predecir su probabilidad 
-    de supervivencia usando múltiples modelos de Machine Learning entrenados.
+    de supervivencia usando modelos de Machine Learning entrenados.
     """)
+    
+    # Verificar que hay modelos disponibles
+    if not models:
+        st.error("❌ No hay modelos disponibles. Verifique que los archivos de modelos estén en la carpeta correcta.")
+        return
+    
+    # Selector de modelo
+    st.subheader("🤖 Selección de Modelo")
+    
+    col_model, col_info = st.columns([2, 1])
+    
+    with col_model:
+        selected_model_name = st.selectbox(
+            "Seleccione el modelo para la predicción:",
+            options=list(models.keys()),
+            index=0,
+            help="Elija el modelo de Machine Learning que desea usar para la predicción"
+        )
+        
+    with col_info:
+        if selected_model_name in models:
+            model = models[selected_model_name]
+            model_type = type(model).__name__
+            st.info(f"**Tipo:** {model_type}")
+            
+            # Información específica del modelo
+            if hasattr(model, 'n_estimators'):
+                st.info(f"**Estimadores:** {model.n_estimators}")
+            elif hasattr(model, 'C'):
+                st.info(f"**Regularización C:** {model.C}")
     
     # Botón de información histórica FUERA del formulario
     col_info1, col_info2, col_info3 = st.columns([1, 2, 1])
@@ -284,34 +314,43 @@ def render_prediction_page(df, models):
             try:
                 X_transformed = create_feature_vector_simple(pclass, sex, age, sibsp, parch, fare_value, embarked)
                 
-                # Realizar predicciones con todos los modelos
-                predictions = {}
+                # Obtener solo el modelo seleccionado
+                selected_model = models[selected_model_name]
+                
+                # Hacer predicción con el modelo seleccionado
                 model_info = {}
-                for model_name, model in models.items():
-                    try:
-                        # Información de depuración del modelo
-                        model_type = type(model).__name__
-                        model_info[model_name] = {
-                            'type': model_type,
-                            'module': type(model).__module__
-                        }
-                        
-                        # Verificar si el modelo tiene predict_proba
-                        if hasattr(model, 'predict_proba'):
-                            prob = float(model.predict_proba(X_transformed)[0][1])  # Convertir a float de Python
-                        else:
-                            # Si no tiene predict_proba, usar predict y convertir
-                            pred = model.predict(X_transformed)[0]
-                            prob = float(pred)  # Convertir a float de Python
-                        
-                        predictions[model_name] = prob
-                    except Exception as e:
-                        st.error(f"Error con modelo {model_name}: {str(e)}")
-                        st.error(f"Forma de datos enviada: {X_transformed.shape}")
+                predictions = {}
+                
+                try:
+                    # Información de depuración del modelo
+                    model_type = type(selected_model).__name__
+                    model_info[selected_model_name] = {
+                        'type': model_type,
+                        'module': type(selected_model).__module__
+                    }
+                    
+                    # Verificar el tipo de modelo y hacer predicción apropiada
+                    if 'tensorflow' in str(type(selected_model)).lower() or 'keras' in str(type(selected_model)).lower():
+                        # Modelo de TensorFlow/Keras
+                        prob = float(selected_model.predict(X_transformed)[0][0])
+                    elif hasattr(selected_model, 'predict_proba'):
+                        # Modelos de scikit-learn con predict_proba
+                        prob = float(selected_model.predict_proba(X_transformed)[0][1])
+                    else:
+                        # Otros modelos, usar predict
+                        pred = selected_model.predict(X_transformed)[0]
+                        prob = float(pred)
+                    
+                    predictions[selected_model_name] = prob
+                    
+                except Exception as e:
+                    st.error(f"Error con modelo {selected_model_name}: {str(e)}")
+                    st.error(f"Forma de datos enviada: {X_transformed.shape}")
+                    return
                 
                 # Mostrar información de depuración
-                with st.expander("🔍 Información de Depuración de Modelos", expanded=False):
-                    st.write("**Modelos cargados:**")
+                with st.expander("🔍 Información de Depuración del Modelo", expanded=False):
+                    st.write("**Modelo utilizado:**")
                     for name, info in model_info.items():
                         st.write(f"- **{name}**: {info['type']} (de {info['module']})")
                     
@@ -319,13 +358,13 @@ def render_prediction_page(df, models):
                     st.write(f"- Forma del vector: {X_transformed.shape}")
                     st.write(f"- Primeros 10 valores: {X_transformed[0][:10].tolist()}")
                     
-                    st.write("**Predicciones obtenidas:**")
+                    st.write("**Predicción obtenida:**")
                     for name, prob in predictions.items():
                         st.write(f"- **{name}**: {prob:.4f} ({prob:.1%})")
                     
                     # Prueba adicional: verificar con casos extremos
-                    st.write("**🧪 Prueba de Diferenciación de Modelos:**")
-                    st.write("Probando con casos extremos para verificar diferencias...")
+                    st.write("**🧪 Prueba de Casos Extremos:**")
+                    st.write("Probando el modelo con casos conocidos...")
                     
                     # Caso 1: Mujer, primera clase, joven
                     test1 = create_feature_vector_simple(1, 'female', 25, 0, 0, 100, 'C')
@@ -334,13 +373,16 @@ def render_prediction_page(df, models):
                     
                     for i, (test_case, description) in enumerate([(test1, "Mujer 1ra clase"), (test2, "Hombre 3ra clase")], 1):
                         st.write(f"**Caso {i} ({description}):**")
-                        for model_name, model in models.items():
-                            try:
-                                if hasattr(model, 'predict_proba'):
-                                    test_prob = float(model.predict_proba(test_case)[0][1])
-                                    st.write(f"  - {model_name}: {test_prob:.4f}")
-                            except:
-                                st.write(f"  - {model_name}: Error en predicción de prueba")
+                        try:
+                            if 'tensorflow' in str(type(selected_model)).lower() or 'keras' in str(type(selected_model)).lower():
+                                test_prob = float(selected_model.predict(test_case)[0][0])
+                            elif hasattr(selected_model, 'predict_proba'):
+                                test_prob = float(selected_model.predict_proba(test_case)[0][1])
+                            else:
+                                test_prob = float(selected_model.predict(test_case)[0])
+                            st.write(f"  - {selected_model_name}: {test_prob:.4f}")
+                        except:
+                            st.write(f"  - {selected_model_name}: Error en predicción de prueba")
                         
             except Exception as e:
                 st.error(f"❌ Error creando vector de características: {str(e)}")
@@ -354,40 +396,69 @@ def render_prediction_page(df, models):
                 col1, col2 = st.columns([2, 1])
                 
                 with col1:
-                    st.subheader("🎯 Resultados por Modelo")
+                    st.subheader(f"🎯 Resultado del Modelo: {selected_model_name}")
                     
                     for model_name, prob in predictions.items():
                         confidence = "Alta" if abs(prob - 0.5) > 0.3 else "Media" if abs(prob - 0.5) > 0.15 else "Baja"
                         
+                        # Información del modelo y resultado
+                        st.markdown(f"### 🤖 {model_name}")
                         st.metric(
-                            f"🤖 {model_name}",
+                            "Probabilidad de Supervivencia",
                             f"{prob:.1%}",
                             delta=f"Confianza: {confidence}"
                         )
                         
                         # Barra de progreso visual
-                        st.progress(prob, text=f"Probabilidad de supervivencia: {prob:.1%}")
-                        st.markdown("---")
+                        st.progress(prob, text=f"Probabilidad: {prob:.1%}")
+                        
+                        # Interpretación contextual
+                        if prob > 0.7:
+                            st.success("💚 **Alta probabilidad de supervivencia** - El modelo predice que este pasajero habría tenido buenas posibilidades de sobrevivir.")
+                        elif prob > 0.4:
+                            st.warning("🟡 **Probabilidad moderada de supervivencia** - El resultado es incierto, las características del pasajero presentan factores mixtos.")
+                        else:
+                            st.error("🔴 **Baja probabilidad de supervivencia** - El modelo predice que este pasajero habría tenido pocas posibilidades de sobrevivir.")
                 
                 with col2:
-                    # Resumen de consenso
-                    prob_values = list(predictions.values())
-                    avg_prob = float(np.mean(prob_values))
-                    max_prob = float(max(prob_values))
-                    min_prob = float(min(prob_values))
+                    # Información adicional del modelo
+                    st.subheader("📊 Información del Modelo")
                     
-                    st.subheader("📊 Consenso de Modelos")
-                    st.metric("📈 Promedio", f"{avg_prob:.1%}")
-                    st.metric("⬆️ Máximo", f"{max_prob:.1%}")
-                    st.metric("⬇️ Mínimo", f"{min_prob:.1%}")
+                    # Mostrar tipo de modelo
+                    model_type = type(models[selected_model_name]).__name__
+                    st.info(f"**Algoritmo:** {model_type}")
                     
-                    # Interpretación
-                    if avg_prob > 0.7:
-                        st.success("💚 **Alta probabilidad de supervivencia**")
-                    elif avg_prob > 0.4:
-                        st.warning("🟡 **Probabilidad moderada de supervivencia**")
+                    # Mostrar confianza
+                    prob = list(predictions.values())[0]
+                    confidence_score = abs(prob - 0.5) * 2  # Convertir a escala 0-1
+                    st.metric("Nivel de Confianza", f"{confidence_score:.1%}")
+                    
+                    # Factores más importantes (simulado por ahora)
+                    st.markdown("**🔑 Factores Clave:**")
+                    if sex == 'female':
+                        st.write("• Género femenino (+)")
                     else:
-                        st.error("🔴 **Baja probabilidad de supervivencia**")
+                        st.write("• Género masculino (-)")
+                        
+                    if pclass == 1:
+                        st.write("• Primera clase (+)")
+                    elif pclass == 2:
+                        st.write("• Segunda clase (=)")
+                    else:
+                        st.write("• Tercera clase (-)")
+                        
+                    if age < 18:
+                        st.write("• Menor de edad (+)")
+                    elif age > 60:
+                        st.write("• Edad avanzada (-)")
+                        
+                    family_size = sibsp + parch + 1
+                    if family_size == 1:
+                        st.write("• Viajaba solo (-)")
+                    elif family_size <= 3:
+                        st.write("• Familia pequeña (+)")
+                    else:
+                        st.write("• Familia grande (-)")
         
         except Exception as e:
             st.error(f"❌ Error en la predicción: {str(e)}")
