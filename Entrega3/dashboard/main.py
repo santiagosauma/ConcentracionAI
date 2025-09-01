@@ -164,6 +164,24 @@ def load_models():
                         add_loading_message(f"   - learning_rate: {model.learning_rate}")
                     if hasattr(model, 'C'):
                         add_loading_message(f"   - C (regularización): {model.C}")
+                    
+                    # Validación de dimensiones esperadas
+                    expected_features = 89 if name != 'Neural Network' else 76
+                    add_loading_message(f"   - Features esperadas: {expected_features}")
+                    
+                    # Verificar si el modelo tiene métodos de predicción esperados
+                    has_predict_proba = hasattr(model, 'predict_proba')
+                    has_predict = hasattr(model, 'predict')
+                    add_loading_message(f"   - predict_proba: {'✅' if has_predict_proba else '❌'}")
+                    add_loading_message(f"   - predict: {'✅' if has_predict else '❌'}")
+                        
+                    # Para modelos de TensorFlow
+                    if 'tensorflow' in str(type(model)).lower() or 'keras' in str(type(model)).lower():
+                        try:
+                            input_shape = model.input_shape
+                            add_loading_message(f"   - input_shape: {input_shape}")
+                        except:
+                            add_loading_message(f"   - input_shape: No disponible")
                         
             else:
                 add_loading_message(f"⚠️ Archivo no encontrado: {path}")
