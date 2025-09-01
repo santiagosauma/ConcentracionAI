@@ -1,11 +1,12 @@
 import streamlit as st
 import pandas as pd
 import pickle
+import joblib  # Agregar joblib para cargar los modelos
 import os
 import datetime
 
-# Importar páginas desde el módulo pages
-from pages import (
+# Importar páginas desde el módulo modules
+from modules import (
     render_exploration_page,
     render_prediction_page,
     render_model_analysis_page,
@@ -19,6 +20,17 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# Ocultar la navegación automática de Streamlit
+st.markdown("""
+<style>
+    .stAppHeader {display: none;}
+    .css-1v0mbdj.etr89bj1 {display: none;}
+    .css-1lcbmhc.e1fqkh3o0 {display: none;}
+    section[data-testid="stSidebar"] .css-ng1t4o {display: none;}
+    section[data-testid="stSidebar"] .css-1d391kg {display: none;}
+</style>
+""", unsafe_allow_html=True)
 
 # Inicializar session state para logs
 if 'loading_messages' not in st.session_state:
@@ -108,10 +120,12 @@ def load_models():
         add_loading_message(f"⚠️ Directorio de modelos no encontrado: {model_dir}")
         return models
     
-    # Lista de modelos a cargar
+    # Lista de modelos a cargar (incluyendo todos los disponibles)
     model_files = {
         "Random Forest": "randomforest_model.pkl",
-        "XGBoost": "xgboost_model.pkl"
+        "XGBoost": "xgboost_model.pkl",
+        "Logistic Regression": "logisticregression_model.pkl",
+        "Neural Network": "NeuralNetwork_Publication_20250831_170008.h5"
     }
     
     for name, filename in model_files.items():
@@ -119,9 +133,38 @@ def load_models():
         try:
             if os.path.exists(path):
                 add_loading_message(f"📂 Cargando modelo: {name}")
-                with open(path, 'rb') as f:
-                    models[name] = pickle.load(f)
-                add_loading_message(f"✅ Modelo {name} cargado exitosamente")
+                
+                # Cargar según el tipo de archivo
+                if filename.endswith('.h5'):
+                    # Modelo de Keras/TensorFlow
+                    try:
+                        import tensorflow as tf
+                        model = tf.keras.models.load_model(path)
+                        models[name] = model
+                        add_loading_message(f"✅ Modelo {name} cargado: {type(model).__name__} (TensorFlow/Keras)")
+                    except ImportError:
+                        add_loading_message(f"⚠️ TensorFlow no disponible para cargar {name}")
+                        continue
+                else:
+                    # Modelos de scikit-learn con joblib
+                    model = joblib.load(path)
+                    models[name] = model
+                    
+                    # Información detallada del modelo cargado
+                    model_type = type(model).__name__
+                    model_module = type(model).__module__
+                    add_loading_message(f"✅ Modelo {name} cargado: {model_type} (de {model_module})")
+                    
+                    # Información adicional específica
+                    if hasattr(model, 'n_estimators'):
+                        add_loading_message(f"   - n_estimators: {model.n_estimators}")
+                    if hasattr(model, 'max_depth'):
+                        add_loading_message(f"   - max_depth: {model.max_depth}")
+                    if hasattr(model, 'learning_rate'):
+                        add_loading_message(f"   - learning_rate: {model.learning_rate}")
+                    if hasattr(model, 'C'):
+                        add_loading_message(f"   - C (regularización): {model.C}")
+                        
             else:
                 add_loading_message(f"⚠️ Archivo no encontrado: {path}")
         except Exception as e:
@@ -135,10 +178,12 @@ def main():
     add_loading_message("🚀 Iniciando aplicación..")
     
     # Título principal
-    st.title("🚢 Dashboard Interactivo - Análisis del Titanic")
+    st.title("🚢 Dashboard Titanic - Análisis de Supervivencia ML")
     st.markdown("""
     **Dashboard Interactivo de Machine Learning** para el análisis y predicción de supervivencia en el Titanic.
     Explore los datos, genere predicciones y analice modelos de forma interactiva.
+    
+    **Navegue usando el sidebar** ← para acceder a las diferentes secciones del análisis.
     """)
     
     # Mostrar log de carga
@@ -154,19 +199,49 @@ def main():
     # Cargar modelos
     models = load_models()
     
-    # Usar página por defecto (Exploración de Datos)
-    page = "🔍 Exploración de Datos"
+    # === INFORMACIÓN DEL DATASET ===
+    st.subheader("📊 Información del Dataset")
+    
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("📈 Registros Totales", f"{len(df):,}")
+    with col2:
+        st.metric("📋 Variables", f"{len(df.columns)}")
+    with col3:
+        st.metric("🤖 Modelos Cargados", f"{len(models)}")
+    
+    st.markdown("---")
+    
+    # === NAVEGACIÓN ===
+    # Título grande para la navegación en el sidebar
+    st.sidebar.markdown("# 🎯 Elegir Sección")
+    st.sidebar.markdown("**Seleccione el análisis que desea realizar:**")
+    
+    # Selector de página en sidebar (simple y limpio)
+    page_options = [
+        "🔍 Exploración de Datos",
+        "🔮 Predicción Interactiva", 
+        "📊 Análisis de Modelos",
+        "🔄 Análisis What-If"
+    ]
+    
+    selected_page = st.sidebar.selectbox(
+        "Navegación:",
+        options=page_options,
+        index=0,  # Por defecto: Exploración de Datos
+        help="Navegue entre las diferentes secciones del dashboard"
+    )
     
     # Renderizar página seleccionada
-    add_loading_message(f"📄 Navegando a: {page}")
+    add_loading_message(f"📄 Navegando a: {selected_page}")
     
-    if page == "🔍 Exploración de Datos":
+    if selected_page == "🔍 Exploración de Datos":
         render_exploration_page(df)
-    elif page == "🔮 Predicción Interactiva":
+    elif selected_page == "🔮 Predicción Interactiva":
         render_prediction_page(df, models)
-    elif page == "📊 Análisis de Modelos":
+    elif selected_page == "📊 Análisis de Modelos":
         render_model_analysis_page(df, models)
-    elif page == "🔄 Análisis What-If":
+    elif selected_page == "🔄 Análisis What-If":
         render_whatif_page(df, models)
 
 if __name__ == "__main__":
