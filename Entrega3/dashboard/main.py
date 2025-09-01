@@ -1,11 +1,10 @@
 import streamlit as st
 import pandas as pd
 import pickle
-import joblib  # Agregar joblib para cargar los modelos
+import joblib
 import os
 import datetime
 
-# Importar páginas desde el módulo modules
 from modules import (
     render_exploration_page,
     render_prediction_page,
@@ -13,7 +12,6 @@ from modules import (
     render_whatif_page
 )
 
-# Configuración de la página
 st.set_page_config(
     page_title="Dashboard Titanic - Análisis ML",
     page_icon="🚢",
@@ -21,7 +19,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Ocultar la navegación automática de Streamlit
 st.markdown("""
 <style>
     .stAppHeader {display: none;}
@@ -32,31 +29,25 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Inicializar session state para logs
 if 'loading_messages' not in st.session_state:
     st.session_state.loading_messages = []
 
 def add_loading_message(message):
-    """Agregar mensaje al log con timestamp"""
     timestamp = datetime.datetime.now().strftime("%H:%M:%S")
     full_message = f"[{timestamp}] {message}"
     st.session_state.loading_messages.append(full_message)
-    # NO mostrar mensaje en tiempo real - solo guardar en el log
 
 def show_loading_log():
-    """Mostrar dropdown con el log de mensajes de carga"""
     if st.session_state.loading_messages:
         with st.expander(f"📋 Log del Sistema ({len(st.session_state.loading_messages)} eventos)", expanded=False):
             st.write("**Historial de carga y operaciones del sistema:**")
             
-            # Mostrar mensajes en orden cronológico inverso (más recientes primero)
-            for message in reversed(st.session_state.loading_messages[-20:]):  # Mostrar últimos 20
+            for message in reversed(st.session_state.loading_messages[-20:]):
                 st.text(message)
             
             if len(st.session_state.loading_messages) > 20:
                 st.info(f"Mostrando últimos 20 eventos de {len(st.session_state.loading_messages)} total")
             
-            # Botones de control
             col1, col2, col3 = st.columns(3)
             with col1:
                 if st.button("🗑️ Limpiar Log", key="clear_log"):
@@ -74,7 +65,6 @@ def show_loading_log():
                     )
             
             with col3:
-                # Mostrar estadísticas del log
                 success_count = len([m for m in st.session_state.loading_messages if "✅" in m])
                 warning_count = len([m for m in st.session_state.loading_messages if "⚠️" in m])
                 error_count = len([m for m in st.session_state.loading_messages if "❌" in m])
@@ -85,10 +75,8 @@ def show_loading_log():
             st.info("No hay eventos registrados aún")
 
 def load_data():
-    """Cargar y procesar datos del Titanic"""
     add_loading_message("📊 Iniciando carga de datos...")
     
-    # Intentar cargar diferentes archivos de datos con las rutas correctas
     data_paths = [
         "../../Entrega2/data/Titanic_Dataset_Featured.csv",
         "../../Entrega2/data/Titanic_Dataset_Imputado.csv", 
@@ -110,17 +98,15 @@ def load_data():
     return None
 
 def load_models():
-    """Cargar modelos entrenados"""
     add_loading_message("🤖 Iniciando carga de modelos...")
     
     models = {}
-    model_dir = "../models"  # Esta ruta está correcta desde dashboard/
+    model_dir = "../models"
     
     if not os.path.exists(model_dir):
         add_loading_message(f"⚠️ Directorio de modelos no encontrado: {model_dir}")
         return models
     
-    # Lista de modelos a cargar (incluyendo todos los disponibles)
     model_files = {
         "Random Forest": "randomforest_model.pkl",
         "XGBoost": "xgboost_model.pkl", 
@@ -135,9 +121,7 @@ def load_models():
             if os.path.exists(path):
                 add_loading_message(f"📂 Cargando modelo: {name}")
                 
-                # Cargar según el tipo de archivo
                 if filename.endswith('.h5'):
-                    # Modelo de Keras/TensorFlow
                     try:
                         import tensorflow as tf
                         model = tf.keras.models.load_model(path)
@@ -147,16 +131,13 @@ def load_models():
                         add_loading_message(f"⚠️ TensorFlow no disponible para cargar {name}")
                         continue
                 else:
-                    # Modelos de scikit-learn con joblib
                     model = joblib.load(path)
                     models[name] = model
                     
-                    # Información detallada del modelo cargado
                     model_type = type(model).__name__
                     model_module = type(model).__module__
                     add_loading_message(f"✅ Modelo {name} cargado: {model_type} (de {model_module})")
                     
-                    # Información adicional específica
                     if hasattr(model, 'n_estimators'):
                         add_loading_message(f"   - n_estimators: {model.n_estimators}")
                     if hasattr(model, 'max_depth'):
@@ -166,7 +147,6 @@ def load_models():
                     if hasattr(model, 'C'):
                         add_loading_message(f"   - C (regularización): {model.C}")
                     
-                    # Validación de dimensiones esperadas
                     if name == 'Neural Network':
                         expected_features = 76
                     elif name == 'SVM':
@@ -175,13 +155,11 @@ def load_models():
                         expected_features = 89
                     add_loading_message(f"   - Features esperadas: {expected_features}")
                     
-                    # Verificar si el modelo tiene métodos de predicción esperados
                     has_predict_proba = hasattr(model, 'predict_proba')
                     has_predict = hasattr(model, 'predict')
                     add_loading_message(f"   - predict_proba: {'✅' if has_predict_proba else '❌'}")
                     add_loading_message(f"   - predict: {'✅' if has_predict else '❌'}")
                         
-                    # Para modelos de TensorFlow
                     if 'tensorflow' in str(type(model)).lower() or 'keras' in str(type(model)).lower():
                         try:
                             input_shape = model.input_shape
@@ -198,10 +176,8 @@ def load_models():
     return models
 
 def main():
-    """Función principal del dashboard"""
     add_loading_message("🚀 Iniciando aplicación..")
     
-    # Título principal
     st.title("🚢 Dashboard Titanic - Análisis de Supervivencia ML")
     st.markdown("""
     **Dashboard Interactivo de Machine Learning** para el análisis y predicción de supervivencia en el Titanic.
@@ -210,20 +186,16 @@ def main():
     **Navegue usando el sidebar** ← para acceder a las diferentes secciones del análisis.
     """)
     
-    # Mostrar log de carga
     show_loading_log()
     
     st.markdown("---")
     
-    # Cargar datos
     df = load_data()
     if df is None:
         st.stop()
     
-    # Cargar modelos
     models = load_models()
     
-    # === INFORMACIÓN DEL DATASET ===
     st.subheader("📊 Información del Dataset")
     
     col1, col2, col3 = st.columns(3)
@@ -236,12 +208,9 @@ def main():
     
     st.markdown("---")
     
-    # === NAVEGACIÓN ===
-    # Título grande para la navegación en el sidebar
     st.sidebar.markdown("# 🎯 Elegir Sección")
     st.sidebar.markdown("**Seleccione el análisis que desea realizar:**")
     
-    # Selector de página en sidebar (simple y limpio)
     page_options = [
         "🔍 Exploración de Datos",
         "🔮 Predicción Interactiva", 
@@ -252,11 +221,10 @@ def main():
     selected_page = st.sidebar.selectbox(
         "Navegación:",
         options=page_options,
-        index=0,  # Por defecto: Exploración de Datos
+        index=0,
         help="Navegue entre las diferentes secciones del dashboard"
     )
     
-    # Renderizar página seleccionada
     add_loading_message(f"📄 Navegando a: {selected_page}")
     
     if selected_page == "🔍 Exploración de Datos":

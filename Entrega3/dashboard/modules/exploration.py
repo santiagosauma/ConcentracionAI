@@ -7,11 +7,6 @@ import numpy as np
 from scipy import stats
 
 def render_exploration_page(df):
-    """
-    Página de exploración de datos mejorada según rúbrica 4.1
-    Incluye visualizaciones interactivas avanzadas, filtros granulares,
-    estadísticas dinámicas e insights automáticos.
-    """
     st.header("🔍 Exploración de Datos Avanzada")
     
     # Información contextual mejorada
@@ -21,12 +16,9 @@ def render_exploration_page(df):
     y descubrir insights automáticos basados en los datos.
     """)
     
-    # === SECCIÓN 1: FILTROS AVANZADOS ===
     st.sidebar.header("🎛️ Filtros de Exploración Avanzados")
     
-    # Crear columnas para mejor organización de filtros
     with st.sidebar.expander("👥 Filtros Demográficos", expanded=True):
-        # Filtro por género
         selected_sex = st.multiselect(
             "Género:",
             options=df['Sex'].unique(),
@@ -34,7 +26,6 @@ def render_exploration_page(df):
             help="Seleccione uno o más géneros"
         )
         
-        # Filtro por clase
         selected_class = st.multiselect(
             "Clase del Pasajero:",
             options=sorted(df['Pclass'].unique()),
@@ -42,7 +33,6 @@ def render_exploration_page(df):
             help="1 = Primera, 2 = Segunda, 3 = Tercera Clase"
         )
         
-        # Filtro por edad
         age_range = st.slider(
             "Rango de Edad:",
             min_value=int(df['Age'].min()),
@@ -52,7 +42,6 @@ def render_exploration_page(df):
         )
     
     with st.sidebar.expander("🚢 Filtros de Viaje", expanded=False):
-        # Filtro por puerto de embarque
         embarked_options = df['Embarked'].dropna().unique()
         selected_embarked = st.multiselect(
             "Puerto de Embarque:",
@@ -61,7 +50,6 @@ def render_exploration_page(df):
             help="C = Cherbourg, Q = Queenstown, S = Southampton"
         )
         
-        # Filtro por rango de tarifa
         fare_min, fare_max = df['Fare'].min(), df['Fare'].max()
         selected_fare_range = st.slider(
             "Rango de Tarifa (£):",
@@ -71,7 +59,6 @@ def render_exploration_page(df):
             help="Seleccione el rango de tarifas pagadas"
         )
         
-        # Filtro por tamaño de familia
         df['FamilySize'] = df['SibSp'] + df['Parch'] + 1
         family_size_range = st.slider(
             "Tamaño de Familia:",
@@ -81,7 +68,6 @@ def render_exploration_page(df):
             help="Incluye al pasajero + cónyuge/hermanos + padres/hijos"
         )
     
-    # === APLICAR FILTROS ===
     filtered_df = df[
         (df['Sex'].isin(selected_sex)) &
         (df['Pclass'].isin(selected_class)) &
@@ -91,7 +77,6 @@ def render_exploration_page(df):
         (df['FamilySize'].between(family_size_range[0], family_size_range[1]))
     ]
     
-    # === SECCIÓN 2: PANEL DE MÉTRICAS DINÁMICAS ===
     st.subheader("📊 Métricas del Segmento Filtrado")
     
     # Calcular métricas clave
@@ -144,10 +129,8 @@ def render_exploration_page(df):
         st.warning("⚠️ No hay datos que coincidan con los filtros seleccionados. Ajuste los criterios.")
         return
     
-    # === SECCIÓN 3: VISUALIZACIONES INTERACTIVAS AVANZADAS ===
     st.subheader("📈 Análisis Visual Interactivo")
     
-    # Tabs para organizar visualizaciones
     viz_tab1, viz_tab2, viz_tab3, viz_tab4 = st.tabs([
         "📊 Distribuciones", 
         "🔥 Correlaciones", 
@@ -158,7 +141,6 @@ def render_exploration_page(df):
     with viz_tab1:
         st.markdown("#### 📊 Distribuciones por Supervivencia")
         
-        # Gráfico 1: Distribución de edades por supervivencia
         col1, col2 = st.columns(2)
         
         with col1:
@@ -175,7 +157,6 @@ def render_exploration_page(df):
             st.plotly_chart(fig_age, use_container_width=True)
         
         with col2:
-            # Gráfico 2: Distribución de tarifas por supervivencia
             fig_fare = px.histogram(
                 filtered_df[filtered_df['Fare'] < filtered_df['Fare'].quantile(0.95)], 
                 x='Fare', 
@@ -191,7 +172,6 @@ def render_exploration_page(df):
     with viz_tab2:
         st.markdown("#### 🔥 Análisis de Correlaciones")
         
-        # Heatmap de tasas de supervivencia por segmentos
         survival_by_class_sex = filtered_df.groupby(['Pclass', 'Sex'])['Survived'].agg(['mean', 'count']).reset_index()
         survival_pivot = survival_by_class_sex.pivot(index='Pclass', columns='Sex', values='mean')
         
@@ -224,7 +204,6 @@ def render_exploration_page(df):
         col1, col2 = st.columns(2)
         
         with col1:
-            # Boxplot de edades por clase
             fig_box_age = px.box(
                 filtered_df,
                 x='Pclass',
@@ -237,7 +216,6 @@ def render_exploration_page(df):
             st.plotly_chart(fig_box_age, use_container_width=True)
         
         with col2:
-            # Violin plot de tarifas por clase
             fig_violin = px.violin(
                 filtered_df[filtered_df['Fare'] < filtered_df['Fare'].quantile(0.95)],
                 x='Pclass',
@@ -256,7 +234,6 @@ def render_exploration_page(df):
         col1, col2 = st.columns(2)
         
         with col1:
-            # Scatter plot multidimensional
             fig_scatter = px.scatter(
                 filtered_df,
                 x='Age',
@@ -303,12 +280,10 @@ def render_exploration_page(df):
             fig_family.update_layout(height=400)
             st.plotly_chart(fig_family, use_container_width=True)
     
-    # === SECCIÓN 4: INSIGHTS AUTOMÁTICOS ===
     st.subheader("💡 Insights Automáticos del Segmento")
     
     insights = []
     
-    # Insight 1: Supervivencia por género
     if len(selected_sex) > 1:
         survival_by_sex = filtered_df.groupby('Sex')['Survived'].mean()
         best_sex = survival_by_sex.idxmax()
@@ -316,7 +291,6 @@ def render_exploration_page(df):
         diff = (survival_by_sex[best_sex] - survival_by_sex[worst_sex]) * 100
         insights.append(f"👥 **Género**: {best_sex} tiene {diff:.1f}% mayor tasa de supervivencia que {worst_sex}")
     
-    # Insight 2: Supervivencia por clase
     if len(selected_class) > 1:
         survival_by_class = filtered_df.groupby('Pclass')['Survived'].mean()
         best_class = survival_by_class.idxmax()
@@ -324,7 +298,6 @@ def render_exploration_page(df):
         diff = (survival_by_class[best_class] - survival_by_class[worst_class]) * 100
         insights.append(f"🎫 **Clase**: Clase {best_class} tiene {diff:.1f}% mayor supervivencia que Clase {worst_class}")
     
-    # Insight 3: Análisis de edad
     if survival_rate > 0:
         survived_age = filtered_df[filtered_df['Survived'] == 1]['Age'].mean()
         not_survived_age = filtered_df[filtered_df['Survived'] == 0]['Age'].mean()
@@ -334,7 +307,6 @@ def render_exploration_page(df):
                 younger_group = "supervivientes" if survived_age < not_survived_age else "no supervivientes"
                 insights.append(f"📅 **Edad**: Los {younger_group} son en promedio {age_diff:.1f} años más jóvenes")
     
-    # Insight 4: Análisis de tarifa
     if len(filtered_df) > 10:
         high_fare_survival = filtered_df[filtered_df['Fare'] > filtered_df['Fare'].median()]['Survived'].mean()
         low_fare_survival = filtered_df[filtered_df['Fare'] <= filtered_df['Fare'].median()]['Survived'].mean()
@@ -343,14 +315,12 @@ def render_exploration_page(df):
             better_group = "altas" if high_fare_survival > low_fare_survival else "bajas"
             insights.append(f"💰 **Tarifa**: Pasajeros con tarifas {better_group} tienen {abs(fare_diff):.1f}% mejor supervivencia")
     
-    # Mostrar insights
     if insights:
         for insight in insights:
             st.success(insight)
     else:
         st.info("💡 Seleccione diferentes filtros para generar insights comparativos")
     
-    # === SECCIÓN 5: ESTADÍSTICAS DETALLADAS ===
     with st.expander("📊 Estadísticas Detalladas del Segmento", expanded=False):
         col1, col2 = st.columns(2)
         
@@ -362,7 +332,6 @@ def render_exploration_page(df):
         with col2:
             st.markdown("**🎯 Análisis por Categorías**")
             
-            # Tabla de supervivencia por categorías
             survival_summary = []
             
             for col in ['Sex', 'Pclass', 'Embarked']:
@@ -378,13 +347,11 @@ def render_exploration_page(df):
                 st.dataframe(combined_stats)
 
 def calculate_statistical_significance(df, group_col, target_col):
-    """Calcula significancia estadística entre grupos"""
     groups = df[group_col].unique()
     if len(groups) == 2:
         group1 = df[df[group_col] == groups[0]][target_col]
         group2 = df[df[group_col] == groups[1]][target_col]
         
-        # Test t para diferencia de medias
         statistic, p_value = stats.ttest_ind(group1, group2)
         return p_value < 0.05, p_value
     return False, None
