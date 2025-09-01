@@ -179,6 +179,99 @@ def create_feature_vector_simple(pclass, sex, age, sibsp, parch, fare, embarked)
     
     return np.array(features).reshape(1, -1)
 
+def create_feature_vector_neural_network(pclass, sex, age, sibsp, parch, fare, embarked):
+    """
+    Crear un vector de características compatible con el modelo de Red Neuronal (76 características)
+    """
+    import numpy as np
+    
+    # Características numéricas básicas
+    features = [
+        pclass,           # Pclass
+        age,              # Age  
+        sibsp,            # SibSp
+        parch,            # Parch
+        fare,             # Fare
+    ]
+    
+    # Feature engineering básico
+    family_size = sibsp + parch + 1
+    is_alone = 1 if family_size == 1 else 0
+    fare_per_person = fare / family_size if family_size > 0 else fare
+    
+    features.extend([
+        family_size,      # FamilySize
+        is_alone,         # IsAlone
+        fare_per_person,  # FarePerPerson
+        1 if age < 18 else 0,  # IsMinor
+        0,                # Has_Cabin (asumimos no)
+    ])
+    
+    # One-Hot Encoding para Sex
+    features.extend([
+        1 if sex == 'male' else 0,    # Sex_male
+        1 if sex == 'female' else 0,  # Sex_female
+    ])
+    
+    # One-Hot Encoding para Embarked
+    features.extend([
+        1 if embarked == 'C' else 0,  # Embarked_C
+        1 if embarked == 'Q' else 0,  # Embarked_Q  
+        1 if embarked == 'S' else 0,  # Embarked_S
+    ])
+    
+    # One-Hot Encoding para Title (simplificado)
+    if sex == 'male':
+        title_master = 1 if age < 18 else 0
+        title_mr = 1 if age >= 18 else 0
+        title_miss = 0
+        title_mrs = 0
+    else:
+        title_master = 0
+        title_mr = 0
+        title_miss = 1 if age < 25 else 0
+        title_mrs = 1 if age >= 25 else 0
+    
+    features.extend([
+        title_master,     # Title_Master
+        title_miss,       # Title_Miss  
+        title_mr,         # Title_Mr
+        title_mrs,        # Title_Mrs
+    ])
+    
+    # Age Groups
+    age_group_child = 1 if age < 18 else 0
+    age_group_young = 1 if 18 <= age < 35 else 0
+    age_group_adult = 1 if 35 <= age < 60 else 0
+    age_group_senior = 1 if age >= 60 else 0
+    
+    features.extend([
+        age_group_child,   # AgeGroup_Child
+        age_group_young,   # AgeGroup_YoungAdult
+        age_group_adult,   # AgeGroup_Adult
+        age_group_senior,  # AgeGroup_Senior
+    ])
+    
+    # Family Size Categories
+    family_solo = 1 if family_size == 1 else 0
+    family_small = 1 if 2 <= family_size <= 3 else 0
+    family_large = 1 if family_size > 3 else 0
+    
+    features.extend([
+        family_solo,       # FamilySize_Solo
+        family_small,      # FamilySize_Small
+        family_large,      # FamilySize_Large
+    ])
+    
+    # Rellenar con ceros hasta llegar a 76 características (para Red Neuronal)
+    while len(features) < 76:
+        features.append(0)
+    
+    # Asegurarse de que tenemos exactamente 76 características
+    features = features[:76]
+    
+    return np.array(features).reshape(1, -1)
+
 def render_prediction_page(df, models):
     """Página de predicción interactiva"""
     st.header("🔮 Predicción de Supervivencia")
@@ -312,7 +405,11 @@ def render_prediction_page(df, models):
             
             # Crear vector de características compatible con los modelos
             try:
-                X_transformed = create_feature_vector_simple(pclass, sex, age, sibsp, parch, fare_value, embarked)
+                # Usar la función apropiada según el modelo seleccionado
+                if selected_model_name == 'Neural Network':
+                    X_transformed = create_feature_vector_neural_network(pclass, sex, age, sibsp, parch, fare_value, embarked)
+                else:
+                    X_transformed = create_feature_vector_simple(pclass, sex, age, sibsp, parch, fare_value, embarked)
                 
                 # Obtener solo el modelo seleccionado
                 selected_model = models[selected_model_name]
@@ -331,8 +428,9 @@ def render_prediction_page(df, models):
                     
                     # Verificar el tipo de modelo y hacer predicción apropiada
                     if 'tensorflow' in str(type(selected_model)).lower() or 'keras' in str(type(selected_model)).lower():
-                        # Modelo de TensorFlow/Keras
-                        prob = float(selected_model.predict(X_transformed)[0][0])
+                        # Modelo de TensorFlow/Keras - usar método predict
+                        prediction_result = selected_model.predict(X_transformed, verbose=0)
+                        prob = float(prediction_result[0][0])
                     elif hasattr(selected_model, 'predict_proba'):
                         # Modelos de scikit-learn con predict_proba
                         prob = float(selected_model.predict_proba(X_transformed)[0][1])
@@ -367,22 +465,27 @@ def render_prediction_page(df, models):
                     st.write("Probando el modelo con casos conocidos...")
                     
                     # Caso 1: Mujer, primera clase, joven
-                    test1 = create_feature_vector_simple(1, 'female', 25, 0, 0, 100, 'C')
-                    # Caso 2: Hombre, tercera clase, mayor  
-                    test2 = create_feature_vector_simple(3, 'male', 60, 0, 0, 7, 'S')
+                    if selected_model_name == 'Neural Network':
+                        test1 = create_feature_vector_neural_network(1, 'female', 25, 0, 0, 100, 'C')
+                        # Caso 2: Hombre, tercera clase, mayor  
+                        test2 = create_feature_vector_neural_network(3, 'male', 60, 0, 0, 7, 'S')
+                    else:
+                        test1 = create_feature_vector_simple(1, 'female', 25, 0, 0, 100, 'C')
+                        # Caso 2: Hombre, tercera clase, mayor  
+                        test2 = create_feature_vector_simple(3, 'male', 60, 0, 0, 7, 'S')
                     
                     for i, (test_case, description) in enumerate([(test1, "Mujer 1ra clase"), (test2, "Hombre 3ra clase")], 1):
                         st.write(f"**Caso {i} ({description}):**")
                         try:
                             if 'tensorflow' in str(type(selected_model)).lower() or 'keras' in str(type(selected_model)).lower():
-                                test_prob = float(selected_model.predict(test_case)[0][0])
+                                test_prob = float(selected_model.predict(test_case, verbose=0)[0][0])
                             elif hasattr(selected_model, 'predict_proba'):
                                 test_prob = float(selected_model.predict_proba(test_case)[0][1])
                             else:
                                 test_prob = float(selected_model.predict(test_case)[0])
                             st.write(f"  - {selected_model_name}: {test_prob:.4f}")
-                        except:
-                            st.write(f"  - {selected_model_name}: Error en predicción de prueba")
+                        except Exception as test_error:
+                            st.write(f"  - {selected_model_name}: Error en predicción de prueba ({str(test_error)})")
                         
             except Exception as e:
                 st.error(f"❌ Error creando vector de características: {str(e)}")
