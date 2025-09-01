@@ -7,10 +7,8 @@ def main():
     print("🚢 Iniciando Dashboard del Titanic...")
     print("📊 Cargando aplicación Streamlit...")
     
-    # Cambiar al directorio del dashboard
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     
-    # Ejecutar Streamlit
     try:
         subprocess.run([
             sys.executable, "-m", "streamlit", "run", "main.py",
