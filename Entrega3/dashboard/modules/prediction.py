@@ -5,9 +5,7 @@ import numpy as np
 
 @st.dialog("🚢 Información Histórica de Tarifas del Titanic (1912)")
 def show_fare_info_modal():
-    """Modal con información histórica de tarifas"""
     
-    # Crear tabs para diferentes secciones
     tab1, tab2, tab3, tab4 = st.tabs(["💰 Por Clase", "🎫 Tipos de Cabina", "📊 Estadísticas", "🏆 Casos Famosos"])
     
     with tab1:
@@ -86,75 +84,56 @@ def show_fare_info_modal():
         st.write("• **Huérfanos Navratil**: £60 (historia famosa)")
 
 def create_feature_vector_scikit_models_corrected(pclass, sex, age, sibsp, parch, fare, embarked):
-    """
-    FUNCIÓN CORREGIDA - Replica el preprocesamiento del notebook principal para scikit-learn
-    
-    Basada en el análisis de Entrega3_Modelado.ipynb:
-    - Usa las MISMAS 31 características que en el entrenamiento
-    - Aplica StandardScaler para numéricas
-    - Aplica OneHotEncoder para categóricas  
-    - Total: 89 características después del preprocesamiento
-    """
     import numpy as np
     
-    # === REPLICAR LAS CARACTERÍSTICAS EXACTAS DEL ENTRENAMIENTO ===
     
-    # Variables numéricas (17 originales del entrenamiento)
     family_size = sibsp + parch + 1
     is_alone = 1 if family_size == 1 else 0
     fare_per_person = fare / family_size if family_size > 0 else fare
     is_minor = 1 if age < 18 else 0
-    has_cabin = 0  # Asumimos sin cabina
-    ticket_frequency = 1  # Ticket individual
+    has_cabin = 0
+    ticket_frequency = 1
     mother = 1 if (sex == 'female' and parch > 0 and age > 18) else 0
-    name_length = 20  # Aproximación
+    name_length = 20
     
-    # Variables numéricas con transformaciones logarítmicas y sqrt
     fare_log = np.log1p(fare) if fare > 0 else 0
     fare_per_person_log = np.log1p(fare_per_person) if fare_per_person > 0 else 0
     age_sqrt = np.sqrt(age) if age >= 0 else 0
     name_length_sqrt = np.sqrt(name_length) if name_length > 0 else 0
     
-    # Variables numéricas originales (17 features)
     numeric_features = [
-        pclass,              # Pclass
-        age,                 # Age  
-        sibsp,               # SibSp
-        parch,               # Parch
-        fare,                # Fare
-        has_cabin,           # Has_Cabin
-        family_size,         # FamilySize
-        is_alone,            # IsAlone
-        fare_per_person,     # FarePerPerson
-        ticket_frequency,    # TicketFrequency
-        mother,              # Mother
-        name_length,         # NameLength
-        fare_log,            # Fare_log
-        fare_per_person_log, # FarePerPerson_log
-        age_sqrt,            # Age_sqrt
-        name_length_sqrt,    # NameLength_sqrt
-        is_minor,            # IsMinor
+        pclass,
+        age,
+        sibsp,
+        parch,
+        fare,
+        has_cabin,
+        family_size,
+        is_alone,
+        fare_per_person,
+        ticket_frequency,
+        mother,
+        name_length,
+        fare_log,
+        fare_per_person_log,
+        age_sqrt,
+        name_length_sqrt,
+        is_minor,
     ]
     
-    # Aplicar StandardScaler (medias y std aproximadas del dataset del entrenamiento)
     scaler_means = [2.31, 29.7, 0.52, 0.38, 32.2, 0.34, 1.85, 0.6, 18.5, 1.1, 0.08, 18.0, 3.0, 2.7, 5.8, 4.2, 0.15]
     scaler_stds = [0.84, 14.5, 1.1, 0.8, 49.7, 0.47, 1.4, 0.49, 22.3, 0.8, 0.27, 8.0, 1.2, 1.0, 1.2, 1.2, 0.36]
     
-    # Aplicar normalización a variables numéricas
     numeric_scaled = []
     for i, (val, mean, std) in enumerate(zip(numeric_features, scaler_means, scaler_stds)):
         scaled_val = (val - mean) / std if std > 0 else val
         numeric_scaled.append(scaled_val)
     
-    # === VARIABLES CATEGÓRICAS (14 originales) ===
-    
-    # Crear título basado en sexo y edad  
     if sex == 'male':
         title = 'Master' if age < 18 else 'Mr'
     else:
         title = 'Miss' if age < 25 else 'Mrs'
     
-    # Age_Group
     if age < 18:
         age_group = '0-17'
     elif age < 35:
@@ -164,7 +143,6 @@ def create_feature_vector_scikit_models_corrected(pclass, sex, age, sibsp, parch
     else:
         age_group = '60+'
     
-    # AgeGroup (otra categorización)
     if age < 5:
         age_group2 = 'Infant'
     elif age < 13:
@@ -178,7 +156,6 @@ def create_feature_vector_scikit_models_corrected(pclass, sex, age, sibsp, parch
     else:
         age_group2 = 'Senior'
     
-    # FarePerPerson_Quintile (basado en distribución real)
     if fare_per_person <= 7.25:
         fare_quintile = 'Muy_Bajo'
     elif fare_per_person <= 10.5:
@@ -190,7 +167,6 @@ def create_feature_vector_scikit_models_corrected(pclass, sex, age, sibsp, parch
     else:
         fare_quintile = 'Muy_Alto'
     
-    # TicketFreq_Category  
     if family_size == 1:
         ticket_freq = 'Individual'
     elif family_size == 2:
@@ -200,10 +176,8 @@ def create_feature_vector_scikit_models_corrected(pclass, sex, age, sibsp, parch
     else:
         ticket_freq = 'Grupo_Mediano'
     
-    # CabinDeck (asumimos sin cabina)
     cabin_deck = 'Missing'
     
-    # NameLength_Category
     if name_length < 15:
         name_length_cat = 'Muy_Corto'
     elif name_length < 20:
@@ -215,7 +189,6 @@ def create_feature_vector_scikit_models_corrected(pclass, sex, age, sibsp, parch
     else:
         name_length_cat = 'Muy_Largo'
     
-    # NameLength_Quintile
     if name_length <= 12:
         name_quintile = 'Q1'
     elif name_length <= 16:
@@ -227,13 +200,10 @@ def create_feature_vector_scikit_models_corrected(pclass, sex, age, sibsp, parch
     else:
         name_quintile = 'Q5'
     
-    # TicketPrefix (asumimos numérico)
     ticket_prefix = 'NUMERIC'
     
-    # TicketPrefix_Category
     ticket_prefix_cat = 'Numeric'
     
-    # FamilySize_Category
     if family_size == 1:
         family_cat = 'Solo'
     elif family_size <= 3:
@@ -243,38 +213,30 @@ def create_feature_vector_scikit_models_corrected(pclass, sex, age, sibsp, parch
     else:
         family_cat = 'Grande'
     
-    # DeckCategory (asumimos sin deck)
     deck_category = 'Missing'
     
-    # === ONE-HOT ENCODING PARA CATEGÓRICAS ===
-    # (drop='first' omite la primera categoría de cada variable)
     
     categorical_encoded = []
     
-    # Sex (drop='first' → omite 'female', solo 'male')
     categorical_encoded.append(1 if sex == 'male' else 0)
     
-    # Embarked (drop='first' → omite 'C')  
     categorical_encoded.extend([
         1 if embarked == 'Q' else 0,
         1 if embarked == 'S' else 0,
     ])
     
-    # Age_Group (drop='first' → omite primera)
     categorical_encoded.extend([
         1 if age_group == '18-34' else 0,
         1 if age_group == '35-59' else 0, 
         1 if age_group == '60+' else 0,
     ])
     
-    # Title (drop='first' → omite primera categoría alphabetically)
     categorical_encoded.extend([
         1 if title == 'Miss' else 0,
         1 if title == 'Mr' else 0,
         1 if title == 'Mrs' else 0,
     ])
     
-    # AgeGroup (drop='first')
     categorical_encoded.extend([
         1 if age_group2 == 'Child' else 0,
         1 if age_group2 == 'Infant' else 0,
@@ -284,7 +246,6 @@ def create_feature_vector_scikit_models_corrected(pclass, sex, age, sibsp, parch
         1 if age_group2 == 'YoungAdult' else 0,
     ])
     
-    # FarePerPerson_Quintile (drop='first')
     categorical_encoded.extend([
         1 if fare_quintile == 'Bajo' else 0,
         1 if fare_quintile == 'Medio' else 0,
@@ -292,25 +253,21 @@ def create_feature_vector_scikit_models_corrected(pclass, sex, age, sibsp, parch
         1 if fare_quintile == 'Muy_Alto' else 0,
     ])
     
-    # TicketFreq_Category (drop='first')
     categorical_encoded.extend([
         1 if ticket_freq == 'Grupo_Mediano' else 0,
         1 if ticket_freq == 'Grupo_Pequeño' else 0,
         1 if ticket_freq == 'Pareja' else 0,
     ])
     
-    # CabinDeck - muchas categorías, la mayoría serán 0
     for deck in ['B', 'C', 'D', 'E', 'F', 'G', 'T']:
-        categorical_encoded.append(0)  # Asumimos Missing/sin cabina
+        categorical_encoded.append(0)
     
-    # NameLength_Category (drop='first')  
     categorical_encoded.extend([
         1 if name_length_cat == 'Largo' else 0,
         1 if name_length_cat == 'Medio' else 0,
         1 if name_length_cat == 'Muy_Largo' else 0,
     ])
     
-    # NameLength_Quintile (drop='first')
     categorical_encoded.extend([
         1 if name_quintile == 'Q2' else 0,
         1 if name_quintile == 'Q3' else 0,
@@ -318,35 +275,29 @@ def create_feature_vector_scikit_models_corrected(pclass, sex, age, sibsp, parch
         1 if name_quintile == 'Q5' else 0,
     ])
     
-    # TicketPrefix - muchas categorías, mayoría 0
     for prefix in ['A_', 'A_S', 'C', 'CA', 'FCC', 'LINE', 'P_PP', 'PC', 'PP', 'SC_A', 'SC_AH', 'SC_PARIS', 'SO_PP', 'SOC', 'SOP', 'SP', 'STON_O', 'SOTON_O', 'SOTON_OQ', 'W_C', 'WE_P']:
         categorical_encoded.append(0)
     
-    # TicketPrefix_Category (drop='first')
     categorical_encoded.extend([
-        0,  # Otras categorías que no están presentes 
+        0,
         0,
         0,
     ])
     
-    # FamilySize_Category (drop='first')
     categorical_encoded.extend([
         1 if family_cat == 'Mediana' else 0,
         1 if family_cat == 'Pequeña' else 0,
         1 if family_cat == 'Solo' else 0,
     ])
     
-    # DeckCategory (drop='first')
     categorical_encoded.extend([
-        0,  # Media
-        0,  # Superior
+        0,
+        0,
     ])
     
-    # === COMBINAR TODAS LAS CARACTERÍSTICAS ===
     
     all_features = numeric_scaled + categorical_encoded
     
-    # Asegurar exactamente 89 características
     while len(all_features) < 89:
         all_features.append(0.0)
     
@@ -355,39 +306,21 @@ def create_feature_vector_scikit_models_corrected(pclass, sex, age, sibsp, parch
     return np.array(all_features, dtype=np.float32).reshape(1, -1)
 
 def create_feature_vector_svm(pclass, sex, age, sibsp, parch, fare, embarked):
-    """
-    Crear vector de características para el modelo SVM CORREGIDO
-    
-    ACTUALIZADO: Después de corregir el svm.ipynb:
-    - 5 características básicas: Sex, Pclass, Age, SibSp, Parch
-    - Sex: male=1, female=0 
-    - REQUIERE StandardScaler (modelo entrenado con datos escalados)
-    - Modelo optimizado con GridSearchCV
-    - Performance mejorada significativamente
-    
-    IMPORTANTE: Este modelo NECESITA los datos escalados con StandardScaler
-    """
     import numpy as np
     
-    # Convertir sex a numérico (como en el entrenamiento)
     sex_numeric = 1 if sex == 'male' else 0
     
-    # Las 5 características en el orden exacto del entrenamiento
-    # Orden: [Sex, Pclass, Age, SibSp, Parch]
     features_raw = [
-        sex_numeric,    # Sex (1=male, 0=female)
-        pclass,         # Pclass (1, 2, 3)
-        age,            # Age (años)
-        sibsp,          # SibSp (hermanos/esposos)
-        parch,          # Parch (padres/hijos)
+        sex_numeric,
+        pclass,
+        age,
+        sibsp,
+        parch,
     ]
     
-    # Aplicar StandardScaler aproximado (medias y std del dataset de entrenamiento)
-    # Estos valores provienen del análisis del dataset original de Titanic
-    scaler_means = [0.647, 2.31, 29.7, 0.52, 0.38]  # [Sex, Pclass, Age, SibSp, Parch]
+    scaler_means = [0.647, 2.31, 29.7, 0.52, 0.38]
     scaler_stds = [0.478, 0.84, 14.5, 1.1, 0.8]
     
-    # Aplicar normalización
     features_scaled = []
     for i, (val, mean, std) in enumerate(zip(features_raw, scaler_means, scaler_stds)):
         scaled_val = (val - mean) / std if std > 0 else val
@@ -396,43 +329,24 @@ def create_feature_vector_svm(pclass, sex, age, sibsp, parch, fare, embarked):
     return np.array(features_scaled, dtype=np.float32).reshape(1, -1)
 
 def create_feature_vector_neural_network_corrected(pclass, sex, age, sibsp, parch, fare, embarked):
-    """
-    FUNCIÓN CORREGIDA - Replica exactamente el preprocesamiento usado durante el entrenamiento
-    
-    Basada en el análisis del notebook Entrega3_ModeloExtraNN.ipynb:
-    - 22 características específicas seleccionadas
-    - StandardScaler para variables numéricas  
-    - OneHotEncoder para variables categóricas
-    - Total: 76 características después del preprocesamiento
-    """
     import numpy as np
     
-    # === REPLICAR LAS 22 FEATURES ORIGINALES EXACTAS ===
-    
-    # 1. Calcular features derivadas exactas
     family_size = sibsp + parch + 1
     is_alone = 1 if family_size == 1 else 0
     fare_per_person = fare / family_size if family_size > 0 else fare
     is_minor = 1 if age < 18 else 0
     
-    # 2. Calcular transformaciones exactas (como en el entrenamiento)
-    name_length = 20  # Valor aproximado - en entrenamiento se usa NameLength real
+    name_length = 20
     name_length_sqrt = np.sqrt(name_length) if name_length > 0 else 0
     age_sqrt = np.sqrt(age) if age >= 0 else 0
     fare_log = np.log1p(fare) if fare > 0 else 0
     
-    # 3. Has_Cabin - asumimos 0 (no tiene cabina)
     has_cabin = 0
     
-    # 4. Mother - mujer adulta con hijos
     mother = 1 if (sex == 'female' and parch > 0 and age > 18) else 0
     
-    # 5. Ticket frequency - asumimos ticket individual
     ticket_frequency = 1
     
-    # === VARIABLES CATEGÓRICAS ===
-    
-    # Crear título basado en sexo y edad (aproximación del entrenamiento)
     if sex == 'male':
         if age < 18:
             title = 'Master'
@@ -444,7 +358,6 @@ def create_feature_vector_neural_network_corrected(pclass, sex, age, sibsp, parc
         else:
             title = 'Mrs'
     
-    # Name Length Category (aproximación)
     if name_length < 15:
         name_length_category = 'Muy_Corto'
     elif name_length < 20:
@@ -456,7 +369,6 @@ def create_feature_vector_neural_network_corrected(pclass, sex, age, sibsp, parc
     else:
         name_length_category = 'Muy_Largo'
     
-    # Name Length Quintile (aproximación)
     if name_length <= 12:
         name_length_quintile = 'Q1'
     elif name_length <= 16:
@@ -468,7 +380,6 @@ def create_feature_vector_neural_network_corrected(pclass, sex, age, sibsp, parc
     else:
         name_length_quintile = 'Q5'
     
-    # FarePerPerson Quintile (basado en distribución real)
     if fare_per_person <= 7.75:
         fare_quintile = 'Muy_Bajo'
     elif fare_per_person <= 10.5:
@@ -480,7 +391,6 @@ def create_feature_vector_neural_network_corrected(pclass, sex, age, sibsp, parc
     else:
         fare_quintile = 'Muy_Alto'
     
-    # Family Size Category
     if family_size == 1:
         family_category = 'Solo'
     elif family_size <= 3:
@@ -490,7 +400,6 @@ def create_feature_vector_neural_network_corrected(pclass, sex, age, sibsp, parc
     else:
         family_category = 'Grande'
     
-    # Ticket Freq Category (simplificado)
     if family_size == 1:
         ticket_freq_category = 'Individual'
     elif family_size == 2:
@@ -500,51 +409,40 @@ def create_feature_vector_neural_network_corrected(pclass, sex, age, sibsp, parc
     else:
         ticket_freq_category = 'Grupo_Mediano'
     
-    # Cabin Deck y Deck Category - asumimos sin cabina
     cabin_deck = 'Sin_Cabina'
     deck_category = 'Sin_Cabina'
     
-    # Ticket Prefix - asumimos numérico
     ticket_prefix = 'NUMERIC'
     
-    # === PREPARAR LAS 22 CARACTERÍSTICAS ORIGINALES ===
-    
-    # Variables numéricas (12 features) - ESTAS NECESITAN STANDARDSCALER
     numeric_features = [
-        name_length,          # NameLength
-        name_length_sqrt,     # NameLength_sqrt  
-        family_size,          # FamilySize
-        pclass,              # Pclass
-        sibsp,               # SibSp
-        ticket_frequency,    # TicketFrequency
-        has_cabin,           # Has_Cabin
-        age_sqrt,            # Age_sqrt
-        is_alone,            # IsAlone
-        parch,               # Parch
-        fare_log,            # Fare_log
-        is_minor,            # IsMinor
-        mother,              # Mother
+        name_length,
+        name_length_sqrt,
+        family_size,
+        pclass,
+        sibsp,
+        ticket_frequency,
+        has_cabin,
+        age_sqrt,
+        is_alone,
+        parch,
+        fare_log,
+        is_minor,
+        mother,
     ]
     
-    # Aplicar StandardScaler aproximado (medias y std del dataset original)
-    # Estas son aproximaciones basadas en el análisis del Titanic
     scaler_means = [18.0, 4.2, 1.85, 2.31, 0.52, 1.1, 0.34, 5.8, 0.6, 0.38, 3.0, 0.15, 0.08]
     scaler_stds = [8.0, 1.2, 1.4, 0.84, 1.1, 0.8, 0.47, 1.2, 0.49, 0.8, 1.2, 0.36, 0.27]
     
-    # Aplicar normalización
     numeric_scaled = []
     for i, (val, mean, std) in enumerate(zip(numeric_features[:len(scaler_means)], scaler_means, scaler_stds)):
         scaled_val = (val - mean) / std if std > 0 else val
         numeric_scaled.append(scaled_val)
     
-    # === VARIABLES CATEGÓRICAS - ONE HOT ENCODING ===
     
     categorical_features = []
     
-    # Sex (drop='first' → solo male)
     categorical_features.append(1 if sex == 'male' else 0)
     
-    # NameLength_Quintile (Q1 es la primera, se omite con drop='first')
     categorical_features.extend([
         1 if name_length_quintile == 'Q2' else 0,
         1 if name_length_quintile == 'Q3' else 0,
@@ -552,45 +450,38 @@ def create_feature_vector_neural_network_corrected(pclass, sex, age, sibsp, parc
         1 if name_length_quintile == 'Q5' else 0,
     ])
     
-    # DeckCategory (primera categoría se omite)
     categorical_features.extend([
-        0,  # Placeholder para otras categorías
-        0,  # que no están presentes
+        0, 
+        0,  
+    ])
+     
+    categorical_features.extend([
+        0 if ticket_freq_category == 'Individual' else 1,
+        0,  
     ])
     
-    # TicketFreq_Category  
     categorical_features.extend([
-        0 if ticket_freq_category == 'Individual' else 1,  # drop first
-        0,  # otras categorías
+        0 if name_length_category == 'Muy_Corto' else 1,
+        0,  
     ])
     
-    # NameLength_Category
     categorical_features.extend([
-        0 if name_length_category == 'Muy_Corto' else 1,  # drop first
-        0,  # otras categorías
-    ])
-    
-    # CabinDeck (primera se omite)
-    categorical_features.extend([
-        0,  # otras cabinas que no están presentes
+        0,
         0,
         0,
     ])
     
-    # Title (drop='first' omite la primera)
     categorical_features.extend([
         1 if title == 'Miss' else 0,
         1 if title == 'Mr' else 0,
         1 if title == 'Mrs' else 0,
     ])
     
-    # TicketPrefix (primera se omite)
     categorical_features.extend([
-        0,  # NUMERIC es común, pero se omite al ser primero
+        0,
         0,
     ])
     
-    # FarePerPerson_Quintile (primera se omite)  
     categorical_features.extend([
         1 if fare_quintile == 'Bajo' else 0,
         1 if fare_quintile == 'Medio' else 0,
@@ -598,17 +489,14 @@ def create_feature_vector_neural_network_corrected(pclass, sex, age, sibsp, parc
         1 if fare_quintile == 'Muy_Alto' else 0,
     ])
     
-    # FamilySize_Category (primera se omite)
     categorical_features.extend([
         1 if family_category == 'Mediana' else 0,
         1 if family_category == 'Pequeña' else 0,
         1 if family_category == 'Solo' else 0,
     ])
     
-    # === COMBINAR FEATURES ===
     final_features = numeric_scaled + categorical_features
     
-    # Asegurar exactamente 76 características
     while len(final_features) < 76:
         final_features.append(0.0)
     
@@ -617,7 +505,6 @@ def create_feature_vector_neural_network_corrected(pclass, sex, age, sibsp, parc
     return np.array(final_features, dtype=np.float32).reshape(1, -1)
 
 def render_prediction_page(df, models):
-    """Página de predicción interactiva"""
     st.header("🔮 Predicción de Supervivencia")
     
     st.markdown("""
@@ -625,12 +512,10 @@ def render_prediction_page(df, models):
     de supervivencia usando modelos de Machine Learning entrenados.
     """)
     
-    # Verificar que hay modelos disponibles
     if not models:
         st.error("❌ No hay modelos disponibles. Verifique que los archivos de modelos estén en la carpeta correcta.")
         return
     
-    # Selector de modelo
     st.subheader("🤖 Selección de Modelo")
     
     col_model, col_info = st.columns([2, 1])
@@ -649,13 +534,11 @@ def render_prediction_page(df, models):
             model_type = type(model).__name__
             st.info(f"**Tipo:** {model_type}")
             
-            # Información específica del modelo
             if hasattr(model, 'n_estimators'):
                 st.info(f"**Estimadores:** {model.n_estimators}")
             elif hasattr(model, 'C'):
                 st.info(f"**Regularización C:** {model.C}")
     
-    # Botón de información histórica FUERA del formulario
     col_info1, col_info2, col_info3 = st.columns([1, 2, 1])
     with col_info2:
         if st.button("💰 Ver Información Histórica de Tarifas del Titanic", 
@@ -665,7 +548,6 @@ def render_prediction_page(df, models):
     
     st.markdown("---")
     
-    # Formulario de predicción
     with st.form("prediction_form"):
         col1, col2, col3 = st.columns(3)
         
@@ -711,7 +593,6 @@ def render_prediction_page(df, models):
                 help="Número de padres/hijos a bordo"
             )
             
-            # Campo de tarifa simplificado
             fare = st.text_input(
                 "💰 Tarifa Pagada (£):",
                 value="32.0",
@@ -724,11 +605,10 @@ def render_prediction_page(df, models):
             embarked = st.selectbox(
                 "🏃‍♂️ Puerto de Embarque:",
                 options=['C', 'Q', 'S'],
-                index=2,  # Southampton por defecto
+                index=2,
                 help="C = Cherbourg, Q = Queenstown, S = Southampton"
             )
         
-        # Botón de predicción
         submit = st.form_submit_button(
             "🔮 Obtener Predicción",
             type="primary",
@@ -737,7 +617,6 @@ def render_prediction_page(df, models):
 
     if submit:
         try:
-            # Validar y convertir tarifa
             try:
                 fare_value = float(fare)
                 if fare_value < 0:
@@ -747,9 +626,7 @@ def render_prediction_page(df, models):
                 st.error("❌ Por favor ingrese un valor numérico válido para la tarifa")
                 return
             
-            # Crear vector de características compatible con los modelos
             try:
-                # Usar las funciones CORREGIDAS que replican el preprocesamiento exacto
                 if selected_model_name == 'Neural Network':
                     X_transformed = create_feature_vector_neural_network_corrected(pclass, sex, age, sibsp, parch, fare_value, embarked)
                     st.info("🔬 Usando preprocesamiento corregido para Neural Network (76 features + StandardScaler)")
@@ -758,18 +635,14 @@ def render_prediction_page(df, models):
                     st.success("✅ SVM: Modelo optimizado con GridSearchCV + StandardScaler")
                     st.info("🔬 Usando preprocesamiento corregido para SVM (5 features escaladas)")
                 else:
-                    # Para Random Forest, XGBoost y Logistic Regression (89 features)
                     X_transformed = create_feature_vector_scikit_models_corrected(pclass, sex, age, sibsp, parch, fare_value, embarked)
                     st.info("🔬 Usando preprocesamiento corregido para modelos Scikit-learn (89 features + StandardScaler)")
                 
-                # Obtener solo el modelo seleccionado
                 selected_model = models[selected_model_name]
                 
-                # Hacer predicción con el modelo seleccionado
                 model_info = {}
                 predictions = {}
                 
-                # Validar dimensiones antes de la predicción
                 expected_dimensions = {
                     'Neural Network': 76,
                     'Random Forest': 89,
@@ -787,7 +660,6 @@ def render_prediction_page(df, models):
                     return
                 
                 try:
-                    # Información de depuración del modelo
                     model_type = type(selected_model).__name__
                     model_info[selected_model_name] = {
                         'type': model_type,
@@ -797,29 +669,21 @@ def render_prediction_page(df, models):
                         'dimension_check': '✅ Correcto' if actual_dim == expected_dim else f'❌ Error: {actual_dim} vs {expected_dim}'
                     }
                     
-                    # Verificar el tipo de modelo y hacer predicción apropiada
                     if 'tensorflow' in str(type(selected_model)).lower() or 'keras' in str(type(selected_model)).lower():
-                        # Modelo de TensorFlow/Keras - usar método predict
                         prediction_result = selected_model.predict(X_transformed, verbose=0)
                         prob = float(prediction_result[0][0])
                     elif selected_model_name == 'SVM':
-                        # SVM - verificar si el modelo optimizado tiene predict_proba
                         if hasattr(selected_model, 'predict_proba'):
-                            # Modelo con probabilidades reales (kernel soporta decision_function)
                             prob = float(selected_model.predict_proba(X_transformed)[0][1])
                             st.success("✅ SVM usando probabilidades reales del modelo optimizado")
                         else:
-                            # Fallback: convertir predicción binaria a probabilidad
                             binary_pred = selected_model.predict(X_transformed)[0]
-                            # Usar decision_function si está disponible para mayor precision
                             if hasattr(selected_model, 'decision_function'):
                                 decision_score = selected_model.decision_function(X_transformed)[0]
-                                # Convertir decision function a probabilidad aproximada usando sigmoidea
                                 import math
                                 prob = 1 / (1 + math.exp(-decision_score))
                                 st.info(f"📊 SVM usando decision_function: {decision_score:.3f} → prob: {prob:.3f}")
                             else:
-                                # Predicción binaria simple con probabilidad simulada inteligente
                                 if binary_pred == 1:
                                     if sex == 'female':
                                         prob = 0.85 if pclass <= 2 else 0.65
@@ -832,10 +696,8 @@ def render_prediction_page(df, models):
                                         prob = 0.25 if pclass == 3 else 0.35
                                 st.warning(f"⚠️ SVM predicción binaria: {binary_pred} → Probabilidad simulada: {prob:.3f}")
                     elif hasattr(selected_model, 'predict_proba'):
-                        # Modelos de scikit-learn con predict_proba
                         prob = float(selected_model.predict_proba(X_transformed)[0][1])
                     else:
-                        # Otros modelos, usar predict
                         pred = selected_model.predict(X_transformed)[0]
                         prob = float(pred)
                     
@@ -846,7 +708,6 @@ def render_prediction_page(df, models):
                     st.error(f"Forma de datos enviada: {X_transformed.shape}")
                     return
                 
-                # Mostrar información de depuración
                 with st.expander("🔍 Información de Depuración del Modelo", expanded=False):
                     st.write("**Información del Modelo:**")
                     for name, info in model_info.items():
@@ -858,7 +719,6 @@ def render_prediction_page(df, models):
                     st.write(f"- Forma del vector: {X_transformed.shape}")
                     st.write(f"- Primeros 15 valores: {X_transformed[0][:15].tolist()}")
                     
-                    # Mostrar información específica según el modelo
                     if selected_model_name == 'Neural Network':
                         st.write("- **Tipo de vector**: 76 características para Neural Network")
                         st.write("- **Preprocesamiento**: StandardScaler aplicado a variables numéricas")
@@ -881,7 +741,6 @@ def render_prediction_page(df, models):
                     for name, prob in predictions.items():
                         st.write(f"- **{name}**: {prob:.4f} ({prob:.1%})")
                         
-                    # Mostrar características más importantes
                     st.write("**Características Detectadas en Input:**")
                     input_features = {
                         'Pclass': pclass,
@@ -899,22 +758,17 @@ def render_prediction_page(df, models):
                     for key, value in input_features.items():
                         st.write(f"  - {key}: {value}")
                     
-                    # Prueba adicional: verificar con casos extremos
                     st.write("**🧪 Prueba de Casos Extremos:**")
                     st.write("Probando el modelo con casos conocidos...")
                     
-                    # Caso 1: Mujer, primera clase, joven
                     if selected_model_name == 'Neural Network':
                         test1 = create_feature_vector_neural_network_corrected(1, 'female', 25, 0, 0, 100, 'C')
-                        # Caso 2: Hombre, tercera clase, mayor  
                         test2 = create_feature_vector_neural_network_corrected(3, 'male', 60, 0, 0, 7, 'S')
                     elif selected_model_name == 'SVM':
                         test1 = create_feature_vector_svm(1, 'female', 25, 0, 0, 100, 'C')
-                        # Caso 2: Hombre, tercera clase, mayor  
                         test2 = create_feature_vector_svm(3, 'male', 60, 0, 0, 7, 'S')
                     else:
                         test1 = create_feature_vector_scikit_models_corrected(1, 'female', 25, 0, 0, 100, 'C')
-                        # Caso 2: Hombre, tercera clase, mayor  
                         test2 = create_feature_vector_scikit_models_corrected(3, 'male', 60, 0, 0, 7, 'S')
                     
                     for i, (test_case, description) in enumerate([(test1, "Mujer 1ra clase"), (test2, "Hombre 3ra clase")], 1):
@@ -923,7 +777,6 @@ def render_prediction_page(df, models):
                             if 'tensorflow' in str(type(selected_model)).lower() or 'keras' in str(type(selected_model)).lower():
                                 test_prob = float(selected_model.predict(test_case, verbose=0)[0][0])
                             elif selected_model_name == 'SVM':
-                                # SVM special case for test cases
                                 if hasattr(selected_model, 'predict_proba'):
                                     test_prob = float(selected_model.predict_proba(test_case)[0][1])
                                 elif hasattr(selected_model, 'decision_function'):
@@ -932,16 +785,15 @@ def render_prediction_page(df, models):
                                     test_prob = 1 / (1 + math.exp(-decision_score))
                                 else:
                                     binary_pred = selected_model.predict(test_case)[0]
-                                    # Usar la misma lógica que en la predicción principal
                                     if binary_pred == 1:
-                                        if i == 1:  # Mujer 1ra clase
+                                        if i == 1:
                                             test_prob = 0.85
-                                        else:  # Hombre 3ra clase
+                                        else:
                                             test_prob = 0.60
                                     else:
-                                        if i == 1:  # Mujer 1ra clase
+                                        if i == 1:
                                             test_prob = 0.35
-                                        else:  # Hombre 3ra clase
+                                        else:
                                             test_prob = 0.15
                             elif hasattr(selected_model, 'predict_proba'):
                                 test_prob = float(selected_model.predict_proba(test_case)[0][1])
@@ -956,10 +808,8 @@ def render_prediction_page(df, models):
                 return
             
             if predictions:
-                # Mostrar resultados
                 st.success("✅ Predicción completada exitosamente")
                 
-                # Crear visualización de resultados
                 col1, col2 = st.columns([2, 1])
                 
                 with col1:
@@ -968,7 +818,6 @@ def render_prediction_page(df, models):
                     for model_name, prob in predictions.items():
                         confidence = "Alta" if abs(prob - 0.5) > 0.3 else "Media" if abs(prob - 0.5) > 0.15 else "Baja"
                         
-                        # Información del modelo y resultado
                         st.markdown(f"### 🤖 {model_name}")
                         st.metric(
                             "Probabilidad de Supervivencia",
@@ -976,10 +825,8 @@ def render_prediction_page(df, models):
                             delta=f"Confianza: {confidence}"
                         )
                         
-                        # Barra de progreso visual
                         st.progress(prob, text=f"Probabilidad: {prob:.1%}")
                         
-                        # Interpretación contextual
                         if prob > 0.7:
                             st.success("💚 **Alta probabilidad de supervivencia** - El modelo predice que este pasajero habría tenido buenas posibilidades de sobrevivir.")
                         elif prob > 0.4:
@@ -988,19 +835,15 @@ def render_prediction_page(df, models):
                             st.error("🔴 **Baja probabilidad de supervivencia** - El modelo predice que este pasajero habría tenido pocas posibilidades de sobrevivir.")
                 
                 with col2:
-                    # Información adicional del modelo
                     st.subheader("📊 Información del Modelo")
                     
-                    # Mostrar tipo de modelo
                     model_type = type(models[selected_model_name]).__name__
                     st.info(f"**Algoritmo:** {model_type}")
                     
-                    # Mostrar confianza
                     prob = list(predictions.values())[0]
-                    confidence_score = abs(prob - 0.5) * 2  # Convertir a escala 0-1
+                    confidence_score = abs(prob - 0.5) * 2
                     st.metric("Nivel de Confianza", f"{confidence_score:.1%}")
                     
-                    # Factores más importantes (simulado por ahora)
                     st.markdown("**🔑 Factores Clave:**")
                     if sex == 'female':
                         st.write("• Género femenino (+)")
