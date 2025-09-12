@@ -19,15 +19,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-st.markdown("""
-<style>
-    .stAppHeader {display: none;}
-    .css-1v0mbdj.etr89bj1 {display: none;}
-    .css-1lcbmhc.e1fqkh3o0 {display: none;}
-    section[data-testid="stSidebar"] .css-ng1t4o {display: none;}
-    section[data-testid="stSidebar"] .css-1d391kg {display: none;}
-</style>
-""", unsafe_allow_html=True)
 
 if 'loading_messages' not in st.session_state:
     st.session_state.loading_messages = []
