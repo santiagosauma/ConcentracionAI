@@ -52,7 +52,17 @@ Ejecuta el pipeline principal:
 python src/main.py
 ```
 
-## Uso completo, seguir en orden los ipynb en la carpeta notebooks
+## Uso completo, seguir y ejecutar en orden los ipynb en la carpeta notebooks
+
+```
+├── notebooks/
+│   ├── 01_EDA.ipynb           
+│   ├── 02_Preprocessing.ipynb
+|   ├── 03_Feature_Engineering.ipynb
+│   ├── 04_Modeling.ipynb
+│   ├── 05_Interpretability.ipynb
+│   └── 06_Fairness.ipynb
+```
 
 ## Funcionalidades
 - Preprocesamiento de datos
