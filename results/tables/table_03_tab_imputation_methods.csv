@@ -1,0 +1,4 @@
+|l|} Variable,Método Simple,Por Grupos,KNN
+Edad,Mediana global,Mediana por clase/género,k=5 vecinos
+Cabina,Moda,Has_Cabin + moda por clase,No aplicable
+Puerto,Moda,No necesario,No necesario

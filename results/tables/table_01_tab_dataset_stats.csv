@@ -1,0 +1,10 @@
+Variable,Tipo,Valores,Faltantes,Rango
+,,Ãšnicos,,
+Sobreviva,Binaria,2,0,0-1
+Clase,Categórica,3,0,01-mar
+Género,Binaria,2,0,M/F
+Edad,Numérica,88,177 (19.9%),0.42-80
+Hermanos/CÃ³nyuge,Numérica,7,0,0-8
+Padres/Hijos,Numérica,7,0,0-6
+Tarifa,Numérica,248,0,0-512.33
+Puerto Embarque,Categórica,3,2 (0.2%),C/Q/S

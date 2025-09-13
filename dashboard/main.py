@@ -69,9 +69,9 @@ def load_data():
     add_loading_message("📊 Iniciando carga de datos...")
     
     data_paths = [
-        "../../Entrega2/data/Titanic_Dataset_Featured.csv",
-        "../../Entrega2/data/Titanic_Dataset_Imputado.csv", 
-        "../../Entrega2/data/Titanic-Dataset-Canvas.csv"
+        "../data/Titanic_Dataset_Featured.csv",
+        "../data/Titanic_Dataset_Imputado.csv", 
+        "../data/Titanic-Dataset-Canvas.csv"
     ]
     
     for path in data_paths:

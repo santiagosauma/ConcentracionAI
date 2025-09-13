@@ -1,0 +1,9 @@
+|p{2.75cm}|} Feature,Justificación,Relación con Supervivencia
+Title,Tí­tulos extrañ­os del nombre indican estatus social y género,"Mrs: 79.4%, Mr: 15.7%"
+FamilySize,SibSp + Parch + 1. Dinámicas familiares en emergencias,Óptimo: 2-4 personas
+IsAlone,Pasajeros solitarios vs acompaÃ±ados,"Solo: 30.4%, Acompañado: 50.5%"
+CabinDeck,Cubierta del barco. Proximidad a botes salvavidas,Cubiertas superiores: mayor supervivencia
+Mother,"Mujeres adultas con hijos. Protocolo ""mujeres y niños primero""",Mothers: 75% supervivencia
+FarePerPerson,Tarifa/FamilySize. Indicador socioeconómico individual,Correlación positiva fuerte
+TicketFrequency,Personas compartiendo ticket. Grupos de viaje,Grupos medianos: ventaja
+NameLength,Proxy de estatus social victoriano,Nombres largos: mayor supervivencia
